@@ -26,6 +26,7 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
 * Requires software reverse engineering, such as extracing binary data formats:
 
   * Third party written extraction tool, which is specialy reverse engineerd for a single 'Game Engine'.
+
   * Grabbing geometry from video buffer memory using Third party tools. (This is the most easiest way to do)
     * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6, 8, 9 and older OpenGL versions.
     * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
@@ -34,9 +35,16 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
 
 ### Photogrammery method:
 
+Is easy method, but time and computing-power consuming. Technique is pretty simple only what you need to do is to take many screenshots as possible from different camera angles in application and use "processing" application which will generate 3D model with textures from your screenshots. Quality of the generated 3D model with texture is depended on how many "takes" (screenshots) from different camera angle you did. You can follow this [guide]()
 
-Is easy method, but time consuming.
+#### Software
+* [Agisoft Metashape](https://www.agisoft.com/) - What I have used in samples.
+* [OpenMVG](https://github.com/openMVG/openMVG)
+* [VisualSFM](http://ccwu.me/vsfm/)
 
+So in theory you are not altering with original data, or reverse engineering ("cracking") file structures from the software vendor's game engine.
+
+> My personal opinion is using this metod in some way does not alter "The Legal Issue" because only what you are doing are screenshots.
 
 ### Modding:
 
