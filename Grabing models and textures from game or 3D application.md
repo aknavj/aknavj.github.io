@@ -12,7 +12,7 @@ There are a few basic concepts how to grab or export models with textures from a
 There is many ways and reasons how or why you want to use obtained data:
 * **Studying how it is made:** 3D geometry topology, UV-Maps, level design, etc...
 * **To learn programming:** Rendering models, textures because no one wants to look whole life on textured CUBE.
-* **Optimising speed-runs:** Some tools can get/show trigger boxes which can be used as exploit.
+* **Optimising speed-runs:** Some tools can get/show trigger which are represented by boxes. This can be used to find an exploit.
 * **3D printing:** 
 * **Creating an impressinve video:** Known as "3D Edit" for example [CS:GO 3D-Edit like NikkyHD, Fuze or maro2k8!](https://www.youtube.com/watch?v=R-fq8o4Do3g)
 * **Modding different game:** 
