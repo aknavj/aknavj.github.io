@@ -89,8 +89,9 @@ I will not bother you with optimisations and what you can do as next step but I 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/reduced_polygons_c4d.png)
 
 #### Files for Download:
-* ![]()
-* ![]()
+* ![Source Images]()
+* ![Agisoft project]()
+* ![Exported Files](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/files/export.7z)
 
 ### Modding
 
