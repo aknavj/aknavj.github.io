@@ -37,7 +37,8 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
   * [Xentax Forum](https://forum.xentax.com/) There are lot of people who are focused in this area and poking around stuff.
 
 * Grabbing geometry from video buffer memory using Third party tools. (This is the most easiest way to do)
-  * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6, 8, 9 and older OpenGL versions.
+  * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6x, 8x, 9x.
+   * > Note instalation is password protected, type: **ripper**
   * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
 
 ### Tutorial / Usage:
