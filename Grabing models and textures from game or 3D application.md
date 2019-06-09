@@ -4,7 +4,7 @@
 
 ## Goal
 
-The main goal of the article is to summarize methods and techniques what you can use to extract 3D Models and Textures from a game or 3D Application. For further reading, I will provide additional links in the description because I don't want to repeat or additionally quote someone who already wrote it.
+The main goal of the article is to summarize methods and techniques what you can use to extract 3D Models and Textures from a game or 3D Application. For further reading, I will provide additional, explanatory links as the article progress for a better understanding.
 
 ## Introduction 
 
@@ -14,7 +14,7 @@ There are already a few methods of how to grab or export models with textures fr
   Example of usage:
   * [Third party written Tool](#third-party-written-tool)
   * [Graphics analyzers](#graphics-analyzers)
-  * [Ripper tools](#)
+  * [Ripper tools](#ripper-tools)
 * [Non-lethal way](#non-lethal-way)
   * [Photogrammery method](#photogrammery-method) + Example of usage
 ##### Bonus:
@@ -39,20 +39,25 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
  
 > Requires software reverse engineering tools:
 
-* File extraction tools - Third party written tools, which are specialy reverse engineerd for a single purpose, extract targeted data.
+* **File extraction tools** - Third party written tools, which are specialy reverse engineerd for a single purpose, extract targeted data.
   * [Xentax Forum](https://forum.xentax.com/) There are lot of people who are focused in this area and poking around stuff.
 
-* Graphics analyzers / profiling tools:
+* **Graphics analyzers** / **profiling tools**:
   * [Intel Graphic Analyzer](https://software.intel.com/en-us/gpa)
   * [AMD GPU PerfStudio](https://gpuopen.com/archive/gpu-perfstudio/)
   * [NVIDIA Nsight](https://developer.nvidia.com/nsight-graphics)
   * [RenderDoc](https://renderdoc.org/)
 
-* Ripper tools - Third party tools designed for grabbing geometry from video buffer memory.
+* **Ripper tools** - Third party tools designed for grabbing geometry from video buffer memory.
   From principle those tools have same fundamentals as Graphic analyzers.
   * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6x, 8x, 9x.
-  > Note instalation is password protected, type: **ripper**
+    > Note instalation is password protected, type: **ripper**
+  
   * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
+  
+  Tutorials:
+    * [Ninja Ripper - oficial guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/)
+    * [Ninja Ripper - Nero's Tips & Guides](https://nerotips.tumblr.com/post/159024040760/ninja-ripper-guide)
 
 Before you will start to use any Grabbing tool or Graphics analyzers it is a good practice to understand what the Tool does and what is happening inside application. At first, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed. 
 
@@ -69,8 +74,7 @@ So you might grab additional "unwanted" data such as:
 ### Tutorial / Usage:
 
 Guides to follow: (with litlle more description)
-* [Ninja Ripper - oficial guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/)
-* [Ninja Ripper - Nero's Tips & Guides](https://nerotips.tumblr.com/post/159024040760/ninja-ripper-guide)
+
 
 ### Screenshots / Gallery:
 
@@ -103,7 +107,7 @@ Is an easy method, but time and computing-power consuming. The technique is pret
 
 > If you are not familiar with usage of Agisoft Metashape (Photoscan) you can folow [this guide](https://www.youtube.com/watch?v=Uny9nTr22go)
 
-So as first step I started game, in my case it was [Doom 2016 - Steam version](https://store.steampowered.com/app/379720/DOOM/)). In the game I have used built-in Photo Mode where I taken around 300 screenshots from Free camera. Even that most of my screenshots are blured because I didnt turn off "Motion-blur" in Game Advanced Rendering settings, I think final result just came fine.
+So as first step I started game, in my case it was [Doom 2016 - Steam version](https://store.steampowered.com/app/379720/DOOM/). In the game I have used built-in Photo Mode where I taken around 300 screenshots from Free camera. Even that most of my screenshots are blured because I didnt turn off "Motion-blur" in Game Advanced Rendering settings, I think final result just came fine.
 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/game_screenshot.jpg)
 
