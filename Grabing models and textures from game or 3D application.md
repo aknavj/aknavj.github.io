@@ -38,10 +38,13 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
 
 * Grabbing geometry from video buffer memory using Third party tools. (This is the most easiest way to do)
   * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6x, 8x, 9x.
-   * > Note instalation is password protected, type: **ripper**
+  > Note instalation is password protected, type: **ripper**
   * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
 
 * Graphics analyzers:
+  * Intel Graphic Analyzer
+  * GPU PerfStudio
+  * Radeon GPU Profiler (GPU Open)
 
 Before you will start to use any Grabbing tool or Graphics analyzers it is a good practice to understand what the Tool does and what is happening inside application. So at first, you need to understand that everything that you are grabbing is handled by Game Engine of the game itself. Game Engine generally has its sub-system called Rendering engine which is in general responsible for managing everything that you see on the screen and in what order it will be displayed. The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood Rendering Engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application. 
 
