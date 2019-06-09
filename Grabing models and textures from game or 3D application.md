@@ -34,12 +34,13 @@ There are already a few methods of how to grab or export models with textures fr
 
 There is many ways and reasons how or why you want to use obtained data:
 * **Personal usage:** Just play with it around for a fun.
-* **Studying how it is made:** 3D geometry topology, UV-Maps, level design, etc...
-* **To learn programming:** Rendering models, textures because no one wants to look whole life on textured CUBE.
+* **Study how GFX is made:** 3D geometry topology, UV-Maps, level design, etc...
+* **Study how Game engine functions:** Mostly for a viewing rendering optimizations. Check this study of [GTA 5 Rendering engine](http://www.adriancourreges.com/blog/2015/11/02/gta-v-graphics-study/) made by Adrian Courrèges.
+* **To learn programming:** Use assets for rendering models, textures because no one wants to look whole life on textured CUBE.
 * **Optimising speed-runs:** Some tools can get/show trigger which are represented by boxes. This can be used to find an exploit.
-* **3D printing:** 
+* **3D printing:** For example just follow [this instructions!](https://www.instructables.com/id/3D-Printing-Models-from-video-game/)
 * **Creating an impressinve video:** Known as "3D Edit" for example [CS:GO 3D-Edit like NikkyHD, Fuze or maro2k8!](https://www.youtube.com/watch?v=R-fq8o4Do3g)
-* **Modding different game:** 
+* **Modding game:** 
   * Total conversion: for example [Duke Nukem 3D 'Forever' in Serious Sam 3](https://www.youtube.com/watch?v=BDSUeD-WErY)
     * Did you not get a spinoff of your favorite game? Do not worry fan-based developer comunity made one.
 
@@ -50,33 +51,30 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
  
 > Requires software reverse engineering tools:
 
-* **File extraction tools** - Third party written tools, which are specialy reverse engineerd for a single purpose, extract targeted data.
+* **File extraction tools** - Third party written tools, which are especially reverse engineered for a single purpose, extract targeted data.
   * [Xentax Forum](https://forum.xentax.com/) There are lot of people who are focused in this area and poking around stuff.
 
-* **Graphics analyzers** / **profiling tools**:
+* **Graphics analyzers** / **profiling tools**: Are designed to grab everything that goes to the memory of Graphic card during single frame.
   * [Intel Graphic Analyzer](https://software.intel.com/en-us/gpa)
   * [AMD GPU PerfStudio](https://gpuopen.com/archive/gpu-perfstudio/)
   * [NVIDIA Nsight](https://developer.nvidia.com/nsight-graphics)
   * [RenderDoc](https://renderdoc.org/)
 
-* **Ripper tools** - Third party tools designed for grabbing geometry from video buffer memory.
-  From principle those tools have same fundamentals as Graphic analyzers.
+* **Ripper tools** - Third party tools designed for grabbing geometry from video buffer memory. From principle, those tools have the same fundamentals as Graphic analyzers.
   * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6x, 8x, 9x.
     > Note instalation is password protected, type: **ripper**
   
-  * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
   
-  Tutorials:
+  * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
     * [Ninja Ripper - oficial guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/)
     * [Ninja Ripper - Nero's Tips & Guides](https://nerotips.tumblr.com/post/159024040760/ninja-ripper-guide)
 
-Before you will start to use any Grabbing tool or Graphics analyzers it is a good practice to understand what the Tool does and what is happening inside application. At first, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed. 
+Before you will start to use any Grabbing tool or Graphics analyzers it is a good practice to understand what the Tool does and what is happening inside application. At first, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed. The second you must realize that it is impossible to capture Frames per second in real-time from the graphic card, so every time you will do the 'Frame grab', the application will freeze for a few seconds or minutes.
 
-The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood Rendering Engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application.
-
+The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood  Rendering engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application.
 > You will find more informations in [Own Tool](#own-tool) section.
 
-So you might grab additional "unwanted" data such as:
+So you might also grab additional "unwanted" data such as:
 * Portals
 * Trigger areas (represented by Cube/Box shape or Positional Null Axis)
 * Level of details
