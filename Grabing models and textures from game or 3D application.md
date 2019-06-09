@@ -62,9 +62,35 @@ Is an easy method, but time and computing-power consuming. The technique is pret
 
 #### Tutorial / Usage:
 
-So as first step I started some game (in my case it was [Doom 2016]() - Steam version) and entered Photo Mode where I took around 300 screenshots from Free camera. 
+So as first step I started some game, in my case it was [Doom 2016 - Steam version](https://store.steampowered.com/app/379720/DOOM/)). In the game I have used built-in Photo Mode where I taken around 300 screenshots from Free camera. Even that most of my screenshots are blured because I didnt turn off "Motion-blur" in Game Advanced Rendering settings, I think final result just came fine.
 
-#### Screenshots / Gallery:
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/game_screenshot.jpg)
+
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/grabbed_screenshots.png)
+
+Drag and drop photos into Agisoft Metashape do a Photo alignment which will generate a Point-cloud data.
+
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/image_alignment.png)
+
+After Point-cloud data just build Mesh
+
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/output.jpg)
+
+For a beter texture resolution you can rebuild Texture using "Build Texture" with higher resolution settings than defined, I have used 8k resolution which is 4 times bigger than source image resolution (1920x1080).
+
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/screenshoted_path.png)
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/output_recomputed_textures_8k.png)
+
+So a little comparsion for final image quality or result.
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/comparsion.png)
+
+I will not bother you with optimisations and what you can do as next step but I will recommend to reduce polygon mesh by using something like [Simplygon](https://www.simplygon.com/) or [InstaLOD](https://instalod.com/) or built-in functionality like [Cinema 4D](http://www.maxon.net) have called Polygon reduction.
+
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/reduced_polygons_c4d.png)
+
+#### Files for Download:
+* ![]()
+* ![]()
 
 ### Modding
 
