@@ -9,10 +9,10 @@ The main goal of the article is to summarize methods and techniques what you can
 ## Introduction 
 
 There are already a few methods of how to grab or export models with textures from any game or application. I would like to divide them into two main groups:
-* [Lethal way](https://github.com/aknavj/articles/blob/master/Grabing%20models%20and%20textures%20from%20game%20or%203D%20application.md#lethal-way)
-* [Non-leathal way](https://github.com/aknavj/articles/blob/master/Grabing%20models%20and%20textures%20from%20game%20or%203D%20application.md#non-lethal-way)
+* [Lethal way](#lethal-way)
+* [Non-leathal way](#non-lethal-way)
 ##### Bonus:
-* [Own tool](https://github.com/aknavj/articles/blob/master/Grabing%20models%20and%20textures%20from%20game%20or%203D%20application.md#own-tool)
+* [Own tool](#own-tool)
 
 
 There is many ways and reasons how or why you want to use obtained data:
@@ -48,7 +48,9 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
 
 Before you will start to use any Grabbing tool or Graphics analyzers it is a good practice to understand what the Tool does and what is happening inside application. At first, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed. 
 
-The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood Rendering Engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application. You will find more informations in [Own Tool](#own-tool) section.
+The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood Rendering Engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application.
+
+> You will find more informations in [Own Tool](#own-tool) section.
 
 So you might grab additional "unwanted" data such as:
 * Portals
