@@ -17,9 +17,19 @@ There are already a few methods of how to grab or export models with textures fr
   * [Ripper tools](#ripper-tools)
 * [Non-lethal way](#non-lethal-way)
   * [Photogrammery method](#photogrammery-method) + Example of usage
-##### Bonus:
+  * [Game Modding](#game-modding)
+##### Bonus: (This section will come)
 * [Own tool](#own-tool)
-
+  * [Prerequisities]()
+  * [Theory]()
+    * [What is a "data"]()
+    * [Trial and error]()
+  * [Writing Export Tool]()
+    * [Research]()
+    * [Execution]()
+  * [Writing Ripper Tool]()
+    * [Research]()
+    * [Execution]()
 
 There is many ways and reasons how or why you want to use obtained data:
 * **Personal usage:** Just play with it around for a fun.
@@ -147,7 +157,7 @@ I will not bother you with optimisations and what you can do as next step but I 
 | Shaders | Baked | Not included | Shaders are baked in texture |
 | Legal | Not altering with legal agreement | x | |
 
-### Modding
+### Game Modding
 
 The most easiest way to extract data from game is to have oficial tools from game/software vendor. 
   
