@@ -42,14 +42,27 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
 
 ### Tutorial / Usage:
 
+Guides to follow: (with litlle more description)
+* [Ninja Ripper - oficial guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/)
+* [Ninja Ripper - Nero's Tips & Guides](https://nerotips.tumblr.com/post/159024040760/ninja-ripper-guide)
+
 ### Screenshots / Gallery:
+
+### Summary
+
+| Data | Pros | Cons | Note |
+|----- |----- | ---- | ---- |
+| Models | Single files |  | Randomized without correct naming |
+| Textures | Single files |  | Randomly generated name |
+| Shaders | Single files | | Shader in assembled structure |
+| Legal | x | Breaks Legal agreement | |
   
 ## **Non-leathal way**
 
 ### Photogrammery method
 
 #### Introduction:
-Is an easy method, but time and computing-power consuming. The technique is pretty simple only what you need to do is to take many screenshots as possible from different camera angles in the application and use "processing" application which will generate a 3D model with textures from your screenshots. Quality of the generated 3D model with texture is depended on how many "takes" (screenshots) from different camera angle you did. You can follow this [guide]()
+Is an easy method, but time and computing-power consuming. The technique is pretty simple only what you need to do is to take many screenshots as possible from different camera angles in the application and use "processing" application which will generate a 3D model with textures from your screenshots. Quality of the generated 3D model with texture is depended on how many "takes" (screenshots) from different camera angle you did. You can follow this [guide](https://www.agisoft.com/pdf/photoscan-pro_1_3_en.pdf) from **page 8 chapter 2**.
 
 > In theory, you are not altering with original data, or reverse engineering ("cracking") file structures from the software vendor's game engine, because you are just taking screenshots. :-)
 
@@ -60,23 +73,25 @@ Is an easy method, but time and computing-power consuming. The technique is pret
 * [OpenMVG](https://github.com/openMVG/openMVG)
 * [VisualSFM](http://ccwu.me/vsfm/)
 
-#### Tutorial / Usage:
+#### Example of usage: (Agisoft Metashape)
 
-So as first step I started some game, in my case it was [Doom 2016 - Steam version](https://store.steampowered.com/app/379720/DOOM/)). In the game I have used built-in Photo Mode where I taken around 300 screenshots from Free camera. Even that most of my screenshots are blured because I didnt turn off "Motion-blur" in Game Advanced Rendering settings, I think final result just came fine.
+> If you are not familiar with usage of Agisoft Metashape (Photoscan) you can folow [this guide](https://www.youtube.com/watch?v=Uny9nTr22go)
+
+So as first step I started game, in my case it was [Doom 2016 - Steam version](https://store.steampowered.com/app/379720/DOOM/)). In the game I have used built-in Photo Mode where I taken around 300 screenshots from Free camera. Even that most of my screenshots are blured because I didnt turn off "Motion-blur" in Game Advanced Rendering settings, I think final result just came fine.
 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/game_screenshot.jpg)
 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/grabbed_screenshots.png)
 
-Drag and drop photos into Agisoft Metashape do a Photo alignment which will generate a Point-cloud data.
+Drag and drop photos into Agisoft Metashape do a **Photo alignment** which will generate a **Point-cloud data**.
 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/image_alignment.png)
 
-After Point-cloud data just build Mesh
+After Point-cloud data just **build Mesh**
 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/output.jpg)
 
-For a beter texture resolution you can rebuild Texture using "Build Texture" with higher resolution settings than defined, I have used 8k resolution which is 4 times bigger than source image resolution (1920x1080).
+For a beter texture resolution you can rebuild Texture using **"Build Texture"** with higher resolution settings than defined, I have used 8k resolution which is 4 times bigger than source image resolution (1920x1080).
 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/screenshoted_path.png)
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/output_recomputed_textures_8k.png)
@@ -92,6 +107,15 @@ I will not bother you with optimisations and what you can do as next step but I 
 * [Source Images]()
 * [Agisoft project]()
 * [Exported Files](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/files/export.7z)
+
+#### Summary
+
+| Data | Pros | Cons | Note |
+|----- |----- | ---- | ---- |
+| Models | Generated | Single file  | Might have big file size. Needs optimisition |
+| Textures | Generated | Single file | Might have big size. In-correct UV |
+| Shaders | Baked | Not included | Shaders are baked in texture |
+| Legal | Not altering with legal agreement | x | |
 
 ### Modding
 
