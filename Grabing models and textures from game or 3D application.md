@@ -9,12 +9,13 @@ The main goal of the article is to summarize methods and techniques what you can
 ## Introduction 
 
 There are already a few methods of how to grab or export models with textures from any game or application. I would like to divide them into two main groups:
+
 * [Lethal way](#lethal-way)
 
   Example of usage:
-  * [Third party written Tool](#third-party-written-tool)
   * [Graphics analyzers](#graphics-analyzers)
   * [Ripper tools](#ripper-tools)
+  * [Comparing Data](#comparing-data)
 * [Non-lethal way](#non-lethal-way)
   * [Photogrammery method](#photogrammery-method) + Example of usage
   * [Game Modding](#game-modding)
