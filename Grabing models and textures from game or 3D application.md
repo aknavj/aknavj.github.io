@@ -69,7 +69,10 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
     * [Ninja Ripper - oficial guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/)
     * [Ninja Ripper - Nero's Tips & Guides](https://nerotips.tumblr.com/post/159024040760/ninja-ripper-guide)
 
-Before you will start to use any **Ripper tool** or **Graphics analyzer** it is a good practice to understand what the Tool does and what is happening inside application. At first, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed. The second you must realize that it is impossible to capture Frames per second in real-time from the graphic card, so every time you will do the 'Frame grab', the application will freeze for a few seconds or minutes.
+Before you will start to use any **Ripper tool** or **Graphics analyzer** it is a good practice to understand what the Tool does and what is happening inside application. At first,you must be aware of which Graphics API does the game run and check if tool or software of your selection does support that criteria, otherwise it might not work.
+> There are some cases of "software protection" against reverse engineering tools that will disable the functionality of software disassemblers or profilers or even prevent it from running the application. 
+
+The second you must realize that it is impossible to capture Frames per second in real-time from the graphic card, so every time you will do the 'Frame grab', the application will freeze for a few seconds or minutes. And for the third, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed.
 
 The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood  Rendering engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application.
 > You will find more informations in [Own Tool](#own-tool) section.
@@ -84,9 +87,9 @@ So you might also grab additional "unwanted" data such as:
 
 The following selection was made not because I loved those titles, but because there is still a lack of third-party community extraction tools for file formats. They are hard to crack or not interesting enough to give a try. This serves as proof that you can still extract game data from most of the games without official or community support.
 
-* For a Graphics Analyzer section I have used the game on steam [Alien: Isolation](https://store.steampowered.com/app/214490/Alien_Isolation/) from Creative Assembly.
+* For a Graphics Analyzer section I have used the DirectX 11 game steam-version of [Alien: Isolation](https://store.steampowered.com/app/214490/Alien_Isolation/) from Creative Assembly.
 
-* For Ripper Tools section I choose to use older DirectX 9 game [Dead Space 2](https://store.steampowered.com/app/47780/Dead_Space_2/) from Visceral games (EA)
+* For Ripper Tools section I choose to use older DirectX 9 game steam-version of [Dead Space 2](https://store.steampowered.com/app/47780/Dead_Space_2/) from Visceral games (EA)
 
 #### Graphics Analyzers
 
