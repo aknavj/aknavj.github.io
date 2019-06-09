@@ -62,6 +62,8 @@ Is an easy method, but time and computing-power consuming. The technique is pret
 
 #### Tutorial / Usage:
 
+So as first step I started some game (in my case it was [Doom 2016]() - Steam version) and entered Photo Mode where I took around 300 screenshots from Free camera. 
+
 #### Screenshots / Gallery:
 
 ### Modding
