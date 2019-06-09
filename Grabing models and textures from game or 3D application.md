@@ -31,20 +31,22 @@ There is many ways and reasons how or why you want to use obtained data:
 ### Introduction:
 Lethal way breaks all Legal agreements with software/game vendor and distributor. Simply you are not supposed to reverse engineer a product or 'steal' any kind of content created by a vendor it is their own intellectual property. But we are doing it because it is fun and most the hardcore fans do not simply care. At least what you can do is not to share "ripped" content for commercial purposes.
  
-> Requires software reverse engineering, such as extracing binary data formats:
+> Requires software reverse engineering tools:
 
-* Third party written extraction tool, which is specialy reverse engineerd for a single 'Game Engine'.
+* Third party written extraction tool, which is specialy reverse engineerd for a single purpose, extract targeted data.
   * [Xentax Forum](https://forum.xentax.com/) There are lot of people who are focused in this area and poking around stuff.
 
+* Graphics analyzers / profiling tools:
+  * [Intel Graphic Analyzer](https://software.intel.com/en-us/gpa)
+  * [AMD GPU PerfStudio](https://gpuopen.com/archive/gpu-perfstudio/)
+  * [NVIDIA Nsight](https://developer.nvidia.com/nsight-graphics)
+  * [RenderDoc](https://renderdoc.org/)
+
 * Grabbing geometry from video buffer memory using Third party tools. (This is the most easiest way to do)
+  From principle those tools have same fundamentals as Graphic analyzers.
   * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6x, 8x, 9x.
   > Note instalation is password protected, type: **ripper**
   * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
-
-* Graphics analyzers:
-  * Intel Graphic Analyzer
-  * GPU PerfStudio
-  * Radeon GPU Profiler (GPU Open)
 
 Before you will start to use any Grabbing tool or Graphics analyzers it is a good practice to understand what the Tool does and what is happening inside application. At first, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed. 
 
@@ -75,7 +77,7 @@ Guides to follow: (with litlle more description)
 | Shaders | Single files | | Shader in assembled structure |
 | Legal | x | Breaks Legal agreement | |
   
-## **Non-leathal way**
+## **Non-lethal way**
 
 ### Photogrammery method
 
