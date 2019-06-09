@@ -2,10 +2,12 @@
 
 # Grabing Models and Textures from Game or 3D application
 
-## Goal
-
-The main goal of the article is to summarize methods and techniques what you can use to extract 3D Models and Textures from a game or 3D Application. For further reading, I will provide additional, explanatory links as the article progress for a better understanding.
-
+#### Goal
+```
+The main goal of the article is to summarize methods and techniques what you can use to extract 3D Models 
+and Textures from a game or 3D Application. For further reading, I will provide additional, explanatory 
+links as the article progress for a better understanding.
+```
 ## Introduction 
 
 There are already a few methods of how to grab or export models with textures from any game or application. I would like to divide them into two main groups:
@@ -37,12 +39,11 @@ There is many ways and reasons how or why you want to use obtained data:
 * **Study how GFX is made:** 3D geometry topology, UV-Maps, level design, etc...
 * **Study how Game engine functions:** Mostly for a viewing rendering optimizations. Check this study of [GTA 5 Rendering engine](http://www.adriancourreges.com/blog/2015/11/02/gta-v-graphics-study/) made by Adrian Courrèges.
 * **To learn programming:** Use assets for rendering models, textures because no one wants to look whole life on textured CUBE.
-* **Optimising speed-runs:** Some tools can get/show trigger which are represented by boxes. This can be used to find an exploit.
+* **Optimizing  speed-runs:** Some tools can get/show trigger which are represented by boxes. This can be used to find an exploit.
 * **3D printing:** For example just follow [this instructions!](https://www.instructables.com/id/3D-Printing-Models-from-video-game/)
-* **Creating an impressinve video:** Known as "3D Edit" for example [CS:GO 3D-Edit like NikkyHD, Fuze or maro2k8!](https://www.youtube.com/watch?v=R-fq8o4Do3g)
-* **Modding game:** 
-  * Total conversion: for example [Duke Nukem 3D 'Forever' in Serious Sam 3](https://www.youtube.com/watch?v=BDSUeD-WErY)
-    * Did you not get a spinoff of your favorite game? Do not worry fan-based developer comunity made one.
+* **Creating an impressive video:** Known as "3D Edit" for example [CS:GO 3D-Edit like NikkyHD, Fuze or maro2k8!](https://www.youtube.com/watch?v=R-fq8o4Do3g)
+* **Modding a game:** 
+  * Total conversion: For example [Duke Nukem 3D 'Forever' in Serious Sam 3](https://www.youtube.com/watch?v=BDSUeD-WErY)
 
 ## **Lethal way**
  
@@ -80,21 +81,13 @@ So you might also grab additional "unwanted" data such as:
 * Level of details
 * Collision-shaped representations (boxes, cylinders, spheres)
 
-### Tutorial / Usage:
+### Example of Usage:
 
-Guides to follow: (with litlle more description)
+#### Graphics Analyzers
 
+#### Ripper Tools
 
-### Screenshots / Gallery:
-
-### Summary
-
-| Data | Pros | Cons | Note |
-|----- |----- | ---- | ---- |
-| Models | Single files |  | Randomized without correct naming |
-| Textures | Single files |  | Randomly generated name |
-| Shaders | Single files | | Shader in assembled structure |
-| Legal | x | Breaks Legal agreement | |
+### Comparing Data
   
 ## **Non-lethal way**
 
