@@ -10,7 +10,13 @@ The main goal of the article is to summarize methods and techniques what you can
 
 There are already a few methods of how to grab or export models with textures from any game or application. I would like to divide them into two main groups:
 * [Lethal way](#lethal-way)
-* [Non-leathal way](#non-lethal-way)
+
+  Example of usage:
+  * [Third party written Tool](#third-party-written-tool)
+  * [Graphics analyzers](#graphics-analyzers)
+  * [Ripper tools](#)
+* [Non-lethal way](#non-lethal-way)
+  * [Photogrammery method](#photogrammery-method) + Example of usage
 ##### Bonus:
 * [Own tool](#own-tool)
 
@@ -33,7 +39,7 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
  
 > Requires software reverse engineering tools:
 
-* Third party written extraction tool, which is specialy reverse engineerd for a single purpose, extract targeted data.
+* File extraction tools - Third party written tools, which are specialy reverse engineerd for a single purpose, extract targeted data.
   * [Xentax Forum](https://forum.xentax.com/) There are lot of people who are focused in this area and poking around stuff.
 
 * Graphics analyzers / profiling tools:
@@ -42,7 +48,7 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
   * [NVIDIA Nsight](https://developer.nvidia.com/nsight-graphics)
   * [RenderDoc](https://renderdoc.org/)
 
-* Grabbing geometry from video buffer memory using Third party tools. (This is the most easiest way to do)
+* Ripper tools - Third party tools designed for grabbing geometry from video buffer memory.
   From principle those tools have same fundamentals as Graphic analyzers.
   * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6x, 8x, 9x.
   > Note instalation is password protected, type: **ripper**
