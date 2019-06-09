@@ -6,7 +6,7 @@
 
 The main goal of the article is to summarize methods and techniques what you can use to extract 3D Models and Textures from a game or 3D Application. For further reading, I will provide additional links in the description because I don't want to repeat or additionally quote someone who already wrote it.
 
-## Introduction
+## Introduction 
 
 There are already a few methods of how to grab or export models with textures from any game or application. I would like to divide them into two main groups:
 * [Lethal way](https://github.com/aknavj/articles/blob/master/Grabing%20models%20and%20textures%20from%20game%20or%203D%20application.md#lethal-way)
@@ -40,6 +40,16 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
   * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6x, 8x, 9x.
    * > Note instalation is password protected, type: **ripper**
   * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
+
+* Graphics analyzers:
+
+Before you will start to use any Grabbing tool or Graphics analyzers it is a good practice to understand what the Tool does and what is happening inside application. So at first, you need to understand that everything that you are grabbing is handled by Game Engine of the game itself. Game Engine generally has its sub-system called Rendering engine which is in general responsible for managing everything that you see on the screen and in what order it will be displayed. The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood Rendering Engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application. 
+
+So you will be also grabbing:
+* Portals
+* Level of details
+* Collision-shaped representations (boxes, cylinders, spheres)
+* Etc...
 
 ### Tutorial / Usage:
 
