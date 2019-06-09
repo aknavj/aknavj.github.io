@@ -49,8 +49,7 @@ There is many ways and reasons how or why you want to use obtained data:
  
 ### Introduction:
 Lethal way breaks all Legal agreements with software/game vendor and distributor. Simply you are not supposed to reverse engineer a product or 'steal' any kind of content created by a vendor it is their own intellectual property. But we are doing it because it is fun and most the hardcore fans do not simply care. At least what you can do is not to share "ripped" content for commercial purposes.
- 
-> Requires software reverse engineering tools:
+
 
 * **File extraction tools** - Third party written tools, which are especially reverse engineered for a single purpose, extract targeted data.
   * [Xentax Forum](https://forum.xentax.com/) There are lot of people who are focused in this area and poking around stuff.
@@ -63,14 +62,14 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
 
 * **Ripper tools** - Third party tools designed for grabbing geometry from video buffer memory. From principle, those tools have the same fundamentals as Graphic analyzers.
   * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6x, 8x, 9x.
-    > Note instalation is password protected, type: **ripper**
+    > Note: Instalation is password protected, type: **ripper**
   
   
-  * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
+  * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9x, 10x, 11x and newer.
     * [Ninja Ripper - oficial guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/)
     * [Ninja Ripper - Nero's Tips & Guides](https://nerotips.tumblr.com/post/159024040760/ninja-ripper-guide)
 
-Before you will start to use any Grabbing tool or Graphics analyzers it is a good practice to understand what the Tool does and what is happening inside application. At first, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed. The second you must realize that it is impossible to capture Frames per second in real-time from the graphic card, so every time you will do the 'Frame grab', the application will freeze for a few seconds or minutes.
+Before you will start to use any **Ripper tool** or **Graphics analyzer** it is a good practice to understand what the Tool does and what is happening inside application. At first, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed. The second you must realize that it is impossible to capture Frames per second in real-time from the graphic card, so every time you will do the 'Frame grab', the application will freeze for a few seconds or minutes.
 
 The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood  Rendering engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application.
 > You will find more informations in [Own Tool](#own-tool) section.
@@ -82,6 +81,12 @@ So you might also grab additional "unwanted" data such as:
 * Collision-shaped representations (boxes, cylinders, spheres)
 
 ### Example of Usage:
+
+The following selection was made not because I loved those titles, but because there is still a lack of third-party community extraction tools for file formats. They are hard to crack or not interesting enough to give a try. This serves as proof that you can still extract game data from most of the games without official or community support.
+
+* For a Graphics Analyzer section I have used the game on steam [Alien: Isolation](https://store.steampowered.com/app/214490/Alien_Isolation/) from Creative Assembly.
+
+* For Ripper Tools section I choose to use older DirectX 9 game [Dead Space 2](https://store.steampowered.com/app/47780/Dead_Space_2/) from Visceral games (EA)
 
 #### Graphics Analyzers
 
@@ -96,7 +101,7 @@ So you might also grab additional "unwanted" data such as:
 #### Introduction:
 Is an easy method, but time and computing-power consuming. The technique is pretty simple only what you need to do is to take many screenshots as possible from different camera angles in the application and use "processing" application which will generate a 3D model with textures from your screenshots. Quality of the generated 3D model with texture is depended on how many "takes" (screenshots) from different camera angle you did. You can follow this [guide](https://www.agisoft.com/pdf/photoscan-pro_1_3_en.pdf) from **page 8 chapter 2**.
 
-> In theory, you are not altering with original data, or reverse engineering ("cracking") file structures from the software vendor's game engine, because you are just taking screenshots. :-)
+> In theory, you are not altering with original data, or reverse engineering ("cracking") file structures from the software vendor's game engine, because you are just taking screenshots.
 
 ##### Software:
 * Agisoft PhotoScan or [Agisoft Metashape](https://www.agisoft.com/) - What I have used in samples.
