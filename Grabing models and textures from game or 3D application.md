@@ -31,13 +31,14 @@ There is many ways and reasons how or why you want to use obtained data:
 ### Introduction:
 Lethal way breaks all Legal agreements with software/game vendor and distributor. Simply you are not supposed to reverse engineer a product or 'steal' any kind of content created by a vendor it is their own intellectual property. But we are doing it because it is fun and most the hardcore fans do not simply care. At least what you can do is not to share "ripped" content for commercial purposes.
  
-* Requires software reverse engineering, such as extracing binary data formats:
+> Requires software reverse engineering, such as extracing binary data formats:
 
-  * Third party written extraction tool, which is specialy reverse engineerd for a single 'Game Engine'.
+* Third party written extraction tool, which is specialy reverse engineerd for a single 'Game Engine'.
+  * [Xentax Forum](https://forum.xentax.com/) There are lot of people who are focused in this area and poking around stuff.
 
-  * Grabbing geometry from video buffer memory using Third party tools. (This is the most easiest way to do)
-    * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6, 8, 9 and older OpenGL versions.
-    * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
+* Grabbing geometry from video buffer memory using Third party tools. (This is the most easiest way to do)
+  * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6, 8, 9 and older OpenGL versions.
+  * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9 and newer.
 
 ### Tutorial / Usage:
 
@@ -50,10 +51,12 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
 #### Introduction:
 Is an easy method, but time and computing-power consuming. The technique is pretty simple only what you need to do is to take many screenshots as possible from different camera angles in the application and use "processing" application which will generate a 3D model with textures from your screenshots. Quality of the generated 3D model with texture is depended on how many "takes" (screenshots) from different camera angle you did. You can follow this [guide]()
 
-> So, in theory, you are not altering with original data, or reverse engineering ("cracking") file structures from the software vendor's game engine, because you are just taking screenshots. :-)
+> In theory, you are not altering with original data, or reverse engineering ("cracking") file structures from the software vendor's game engine, because you are just taking screenshots. :-)
 
 ##### Software:
-* [Agisoft Metashape](https://www.agisoft.com/) - What I have used in samples.
+* Agisoft PhotoScan or [Agisoft Metashape](https://www.agisoft.com/) - What I have used in samples.
+* [3DF Zephyr Free](https://www.3dflow.net/3df-zephyr-free/)
+* [Autodesk 123D Catch](https://www.autodesk.com/solutions/123d-apps)
 * [OpenMVG](https://github.com/openMVG/openMVG)
 * [VisualSFM](http://ccwu.me/vsfm/)
 
