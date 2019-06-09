@@ -9,10 +9,10 @@ The main goal of the article is to summarize methods and techniques what you can
 ## Introduction
 
 There are already a few methods of how to grab or export models with textures from any game or application. I would like to divide them into two main groups:
-* [Lethal way](https://github.com/aknavj/articles/new/master#lethal-way)
-* [Non-leathal way](https://github.com/aknavj/articles/new/master#non-lethal-way)
+* [Lethal way](https://github.com/aknavj/articles/blob/master/Grabing%20models%20and%20textures%20from%20game%20or%203D%20application.md#lethal-way)
+* [Non-leathal way](https://github.com/aknavj/articles/blob/master/Grabing%20models%20and%20textures%20from%20game%20or%203D%20application.md#non-lethal-way)
 ##### Bonus:
-* [Own tool](https://github.com/aknavj/articles/new/master#own-tool)
+* [Own tool](https://github.com/aknavj/articles/blob/master/Grabing%20models%20and%20textures%20from%20game%20or%203D%20application.md#own-tool)
 
 
 There is many ways and reasons how or why you want to use obtained data:
