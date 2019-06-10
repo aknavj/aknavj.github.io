@@ -85,7 +85,7 @@ So you might also grab additional "unwanted" data, which are practically hidden 
 
 ### Example of Usage:
 
-The following selection was made not because I loved those titles, but because there is still a lack of third-party community extraction tools for file formats. They are hard to crack or not interesting enough to give a try. This serves as proof that you can still extract game data from most of the games without official or community support.
+The following game selection was made not because I loved those titles, but because there is still a lack of third-party community extraction tools for file formats. They are hard to crack or not interesting enough to give a try. This serves as proof that you can still extract game data from most of the games without official or community support.
 
 * For a Graphics Analyzer section I have used the DirectX 11 game steam-version of [Alien: Isolation](https://store.steampowered.com/app/214490/Alien_Isolation/) from Creative Assembly.
 
