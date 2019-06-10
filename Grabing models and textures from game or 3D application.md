@@ -64,15 +64,22 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
   * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm) Is old but still works fine for old games using DirectX 6x, 8x, 9x.
     > Note: Instalation is password protected, type: **ripper**
   
-  
   * [Ninja Ripper](https://gamebanana.com/tools/5638) Works great for most of games based on DirectX 9x, 10x, 11x and newer.
+      * source-code for study is on [github](https://github.com/riccochicco/ninjaripper)
     * [Ninja Ripper - oficial guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/)
     * [Ninja Ripper - Nero's Tips & Guides](https://nerotips.tumblr.com/post/159024040760/ninja-ripper-guide)
+    
+  * [GameAssassin](http://www.mediafire.com/file/0a4104rb1ukczas/GameAssassin.zip)
+    * [Xentax community usage guide](https://forum.xentax.com/viewtopic.php?t=5913)
 
-Before you will start to use any **Ripper tool** or **Graphics analyzer** it is a good practice to understand what the Tool does and what is happening inside application. At first,you must be aware of which Graphics API does the game run and check if tool or software of your selection does support that criteria, otherwise it might not work.
+Before you will start to use any **Ripper tool** or **Graphics analyzer** it is a good practice to understand what the Tool does and what is happening inside application. 
+
+At first,you must be aware of which Graphics API does the game run and check if tool or software of your selection does support that criteria, otherwise it might not work.
 > There are some cases of "software protection" against reverse engineering tools that will disable the functionality of software disassemblers or profilers or even prevent it from running the application. 
 
-The second you must realize that it is impossible to capture Frames per second in real-time from the graphic card, so every time you will do the 'Frame grab', the application will freeze for a few seconds or minutes. And for the third, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed.
+The second you must realize that it is impossible to capture Frames per second in real-time from the graphic card, so every time you will do the 'Frame grab', the application will freeze for a few seconds or minutes. 
+
+And for the third, you must be aware that everything you are grabbing is handled by Game Engine of the game itself. Generally, Game Engine has its sub-system called 'Rendering engine' which is in the most common way responsible for managing everything that you see on the screen and in what order it will be displayed.
 
 The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood  Rendering engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application.
 > You will find more informations in [Own Tool](#own-tool) section.
@@ -95,8 +102,27 @@ The following game selection was made not because I loved those titles, but beca
 
 #### Ripper Tools
 
-### Comparing Data
-  
+Using a following software:
+* PC Game [Dead Space 2](https://store.steampowered.com/app/47780/Dead_Space_2/) - steam version
+* [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm)
+* [Ninja Ripper](https://gamebanana.com/tools/5638)
+* 3D Studio Max 2010
+
+##### Using 3D Ripper DX 
+A 3D Ripper DX is a tool which enables you a grab frame data like 3d models, textures, and shaders. For 3d models it utilizes own file format called ".3DR" so for a successful viewing you must have any version of 3D Studio Max from 2009 to 2014 and installed import plugin which is included in 3D Ripper DX installation. Any other data such as textures (DDS Format) and shaders (Plain Text format) are viewable with common tools included in Windows 10.
+> Note: Shaders are in compiled form so you need to understand for DirectX HLSL Shading language with Fixed Function pipeline its instruction set and registers for a proper decomposition. You can follow for example [this guide](https://drivers.amd.com/misc/samples/dx9/FixedFuncShader.pdf)
+
+##### Using Ninja Ripper
+Usage and principles are almost the same as 3D Ripper DX, but Ninja does not support wireframe mode. 
+
+#### Comparing Data
+
+From results, we are able to see one main difference between **Ninja Ripper** and **3D Ripper DX** is that tool captures the scene before any transformations from GPU shaders, it simply means that characters remain in the T-pose and additional/other geometry is also captured without rotation or deformation. That is one of the reasons why 3D Ripper DX is able to grab only what you are seeing on the screen.
+
+#### Conclusion
+
+I would like to say that every software has its own use case. For example, if I want to create "diorama" scene I will be choosing a **3D Ripper DX** for a "models in motion", on another side if I would like to have non-deformed assets in their original stage I would choose **Ninja Ripper** instead.
+ 
 ## **Non-lethal way**
 
 ### Photogrammery method
