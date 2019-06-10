@@ -111,14 +111,18 @@ Using a following software:
 * Maxon Cinema 4D - For viewing data
 
 ##### Using 3D Ripper DX
-    * For a more detailed software usage please follow [this guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/).
+
+  * For a more detailed software usage please follow [this guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/).
+
 A 3D Ripper DX is a tool which enables you a grab frame data like 3d models, textures, and shaders. For 3d models it utilizes own file format called ".3DR" so for a successful viewing you must have any version of 3D Studio Max from 2009 to 2014 and installed import plugin which is included in 3D Ripper DX installation. Any other data such as textures (DDS Format) and shaders (Plain Text format) are viewable with common tools included in Windows 10.
 > Note: Shaders are in compiled form so you need to understand for DirectX HLSL Shading language with Fixed Function pipeline its instruction set and registers for a proper decomposition. You can follow for example [this guide](https://drivers.amd.com/misc/samples/dx9/FixedFuncShader.pdf)
 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/rippingtools/3dripper-first.png?raw=true)
 
 ##### Using Ninja Ripper
-    * For a more detailed software usage please follow [this guide](http://www.deep-shadows.com/hax/3DRipperDX.htm#quickstartguide).
+
+  * For a more detailed software usage please follow [this guide](http://www.deep-shadows.com/hax/3DRipperDX.htm#quickstartguide).
+
 Usage and principles are almost the same as 3D Ripper DX, but Ninja does not support wireframe mode. Ninja Ripper also utilizes its own format ".RIP" which is exportable via Python plugin for 3D Studio Max. (Already included in software folder '/tool' directory).
 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/rippingtools/ninjaripper-first.png?raw=true)
@@ -126,6 +130,8 @@ Usage and principles are almost the same as 3D Ripper DX, but Ninja does not sup
 #### Comparing Data
 
 From results, we are able to see one main difference between **Ninja Ripper** and **3D Ripper DX** is that tool captures the scene before any transformations from GPU shaders, it simply means that characters remain in the T-pose and additional/other geometry is also captured without rotation or deformation. That is one of the reasons why 3D Ripper DX is able to grab only what you are seeing on the screen.
+
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/rippingtools/compare-first.png?raw=true)
 
 #### Conclusion
 
