@@ -77,7 +77,7 @@ The second you must realize that it is impossible to capture Frames per second i
 The Rendering engine is working with all 3D data structures such as vertices, polygons, UV coordinates, and textures. Under the hood  Rendering engine is also handling their optimization before sending it to the video buffer memory and before it is all displayed in the frame of the application.
 > You will find more informations in [Own Tool](#own-tool) section.
 
-So you might also grab additional "unwanted" data, which are practically hidden but still exists in video memory such as:
+So you might also grab additional "unwanted" data, which are practically hidden but their representation still exists in video memory such as:
 * Portal areas for indoor or outdoor rendering
 * Trigger areas (represented by Cube/Box shape or Positional Null Axis)
 * Level of details
