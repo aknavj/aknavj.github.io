@@ -52,7 +52,7 @@ Lethal way breaks all Legal agreements with software/game vendor and distributor
 
 
 * **File extraction tools** - Third party written tools, which are especially reverse engineered for a single purpose, extract targeted data.
-  * [Xentax Forum](https://forum.xentax.com/) There are lot of people who are focused in this area and poking around stuff.
+  * [Xentax Forum](https://forum.xentax.com/) There are already lot of people in the community who are focused in this area of reverse engineering and poking around stuff.
 
 * **Graphics analyzers** / **profiling tools**: Are designed to grab everything that goes to the memory of Graphic card during single frame. For a frame breakdown, analysis or investigation.
   * [Intel Graphic Analyzer](https://software.intel.com/en-us/gpa)
