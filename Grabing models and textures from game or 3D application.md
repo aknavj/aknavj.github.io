@@ -85,6 +85,7 @@ The Rendering engine is working with all 3D data structures such as vertices, po
 > You will find more informations in [Own Tool](#own-tool) section.
 
 So you might also grab additional "unwanted" data, which are practically hidden but their representation still exists in video memory such as:
+* Light cones (volumetric FX effect)
 * Portal areas for indoor or outdoor rendering
 * Trigger areas (represented by Cube/Box shape or Positional Null Axis)
 * Level of details
@@ -106,16 +107,21 @@ Using a following software:
 * PC Game [Dead Space 2](https://store.steampowered.com/app/47780/Dead_Space_2/) - steam version
 * [3D Ripper DX](http://www.deep-shadows.com/hax/3DRipperDX.htm)
 * [Ninja Ripper](https://gamebanana.com/tools/5638)
-* 3D Studio Max 2010
+* Autodesk 3D Studio Max 2010 - For model Import/Export
+* Maxon Cinema 4D - For viewing data
 
-##### Using 3D Ripper DX 
+##### Using 3D Ripper DX
+    * For a more detailed software usage please follow [this guide](http://cgig.ru/en/2012/10/ho-to-use-ninja-ripper/).
 A 3D Ripper DX is a tool which enables you a grab frame data like 3d models, textures, and shaders. For 3d models it utilizes own file format called ".3DR" so for a successful viewing you must have any version of 3D Studio Max from 2009 to 2014 and installed import plugin which is included in 3D Ripper DX installation. Any other data such as textures (DDS Format) and shaders (Plain Text format) are viewable with common tools included in Windows 10.
 > Note: Shaders are in compiled form so you need to understand for DirectX HLSL Shading language with Fixed Function pipeline its instruction set and registers for a proper decomposition. You can follow for example [this guide](https://drivers.amd.com/misc/samples/dx9/FixedFuncShader.pdf)
 
 ![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/rippingtools/3dripper-first.png?raw=true)
 
 ##### Using Ninja Ripper
-Usage and principles are almost the same as 3D Ripper DX, but Ninja does not support wireframe mode. 
+    * For a more detailed software usage please follow [this guide](http://www.deep-shadows.com/hax/3DRipperDX.htm#quickstartguide).
+Usage and principles are almost the same as 3D Ripper DX, but Ninja does not support wireframe mode. Ninja Ripper also utilizes its own format ".RIP" which is exportable via Python plugin for 3D Studio Max. (Already included in software folder '/tool' directory).
+
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/rippingtools/ninjaripper-first.png?raw=true)
 
 #### Comparing Data
 
