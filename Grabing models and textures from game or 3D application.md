@@ -112,6 +112,8 @@ Using a following software:
 A 3D Ripper DX is a tool which enables you a grab frame data like 3d models, textures, and shaders. For 3d models it utilizes own file format called ".3DR" so for a successful viewing you must have any version of 3D Studio Max from 2009 to 2014 and installed import plugin which is included in 3D Ripper DX installation. Any other data such as textures (DDS Format) and shaders (Plain Text format) are viewable with common tools included in Windows 10.
 > Note: Shaders are in compiled form so you need to understand for DirectX HLSL Shading language with Fixed Function pipeline its instruction set and registers for a proper decomposition. You can follow for example [this guide](https://drivers.amd.com/misc/samples/dx9/FixedFuncShader.pdf)
 
+![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/rippingtools/3dripper-first.png?raw=true)
+
 ##### Using Ninja Ripper
 Usage and principles are almost the same as 3D Ripper DX, but Ninja does not support wireframe mode. 
 
