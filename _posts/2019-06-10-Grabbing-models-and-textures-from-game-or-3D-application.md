@@ -108,7 +108,7 @@ Using a following software:
 A 3D Ripper DX is a tool which enables you a grab frame data like 3d models, textures, and shaders. For 3d models it utilizes own file format called ".3DR" so for a successful viewing you must have any version of 3D Studio Max from 2009 to 2014 and installed import plugin which is included in 3D Ripper DX installation. Any other data such as textures (DDS Format) and shaders (Plain Text format) are viewable with common tools included in Windows 10.
 > Note: Shaders are in compiled form so you need to understand for DirectX HLSL Shading language with Fixed Function pipeline its instruction set and registers for a proper decomposition. You can follow for example [this guide](https://drivers.amd.com/misc/samples/dx9/FixedFuncShader.pdf)
 
-![](assets/images/gmt_3dripper-first.png?raw=true)
+![](./assets/images/gmt_3dripper-first.png?raw=true)
 
 ##### Using Ninja Ripper
 
@@ -116,13 +116,13 @@ A 3D Ripper DX is a tool which enables you a grab frame data like 3d models, tex
 
 Usage and principles are almost the same as 3D Ripper DX, but Ninja does not support wireframe mode. Ninja Ripper also utilizes its own format ".RIP" which is exportable via Python plugin for 3D Studio Max. (Already included in software folder '/tool' directory).
 
-![](assets/images/gmt_ninjaripper-first.png?raw=true)
+![](./assets/images/gmt_ninjaripper-first.png?raw=true)
 
 #### Comparing Data
 
 From results, we are able to see one main difference between **Ninja Ripper** and **3D Ripper DX** is that tool captures the scene before any transformations from GPU shaders, it simply means that characters remain in the T-pose and additional/other geometry is also captured without rotation or deformation. That is one of the reasons why 3D Ripper DX is able to grab only what you are seeing on the screen.
 
-![](assets/images/gmt_compare-first.png?raw=true)
+![](./assets/images/gmt_compare-first.png?raw=true)
 
 #### Conclusion
 
@@ -150,34 +150,34 @@ Is an easy method, but time and computing-power consuming. The technique is pret
 
 So as first step I started game, in my case it was [Doom 2016 - Steam version](https://store.steampowered.com/app/379720/DOOM/). In the game I have used built-in Photo Mode where I taken around 300 screenshots from Free camera. Even that most of my screenshots are blured because I didnt turn off "Motion-blur" in Game Advanced Rendering settings, I think final result just came fine.
 
-![](assets/images/gmt_game_screenshot.jpg)
+![](./assets/images/gmt_game_screenshot.jpg)
 
-![](assets/images/gmt_grabbed_screenshots.png)
+![](./assets/images/gmt_grabbed_screenshots.png)
 
 Drag and drop photos into Agisoft Metashape do a **Photo alignment** which will generate a **Point-cloud data**.
 
-![](assets/images/gmt_image_alignment.png)
+![](./assets/images/gmt_image_alignment.png)
 
 After Point-cloud data just **build Mesh**
 
-![](assets/images/gmt_output.jpg)
+![](./assets/images/gmt_output.jpg)
 
 For a beter texture resolution you can rebuild Texture using **"Build Texture"** with higher resolution settings than defined, I have used 8k resolution which is 4 times bigger than source image resolution (1920x1080).
 
-![](assets/images/gmt_screenshoted_path.png)
-![](assets/images/gmt_output_recomputed_textures_8k.png)
+![](./assets/images/gmt_screenshoted_path.png)
+![](./assets/images/gmt_output_recomputed_textures_8k.png)
 
 So a little comparsion for final image quality or result.
-![](assets/images/gmt_comparsion.png)
+![](./assets/images/gmt_comparsion.png)
 
 I will not bother you with optimisations and what you can do as next step but I will recommend to reduce polygon mesh by using something like [Simplygon](https://www.simplygon.com/) or [InstaLOD](https://instalod.com/) or built-in functionality like [Cinema 4D](http://www.maxon.net) have called Polygon reduction.
 
-![](assets/images/gmt_reduced_polygons_c4d.png)
+![](./assets/images/gmt_reduced_polygons_c4d.png)
 
 #### Files for Download:
 * [Source Images]()
 * [Agisoft project]()
-* [Exported Files](assets/files/export.7z)
+* [Exported Files](./assets/files/export.7z)
 
 #### Summary
 
