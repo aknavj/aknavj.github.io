@@ -6,4 +6,4 @@ author:
 description: "personal blogpost about development stuff"
 
 # build settings
-remote_theme: jekyll/minima
+remote_theme: jekyll/hacker
