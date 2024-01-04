@@ -1,13 +1,9 @@
 ---
 layout: post
-title: Grabing Models and Textures from Game or 3D application
+title: Grabing models and textures from game or 3D application
 tags: grabbing models 3d application textures
 categories: 3d
 ---
-
-```
-THIS ARTICLE IS STILL UNDER CONSTRUCTION
-```
 
 #### Goal
 ```
@@ -28,18 +24,6 @@ There are already a few methods of how to grab or export models with textures fr
 * [Non-lethal way](#non-lethal-way)
   * [Photogrammery method](#photogrammery-method) + Example of usage
   * [Game Modding](#game-modding)
-##### Bonus: (This section will come)
-* [Own tool](#own-tool)
-  * [Prerequisities]()
-  * [Theory]()
-    * [What is a "data"]()
-    * [Trial and error]()
-  * [Writing Export Tool]()
-    * [Research]()
-    * [Execution]()
-  * [Writing Ripper Tool]()
-    * [Research]()
-    * [Execution]()
 
 There is many ways and reasons how or why you want to use obtained data:
 * **Personal usage:** Just play with it around for a fun.
@@ -124,7 +108,7 @@ Using a following software:
 A 3D Ripper DX is a tool which enables you a grab frame data like 3d models, textures, and shaders. For 3d models it utilizes own file format called ".3DR" so for a successful viewing you must have any version of 3D Studio Max from 2009 to 2014 and installed import plugin which is included in 3D Ripper DX installation. Any other data such as textures (DDS Format) and shaders (Plain Text format) are viewable with common tools included in Windows 10.
 > Note: Shaders are in compiled form so you need to understand for DirectX HLSL Shading language with Fixed Function pipeline its instruction set and registers for a proper decomposition. You can follow for example [this guide](https://drivers.amd.com/misc/samples/dx9/FixedFuncShader.pdf)
 
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/rippingtools/3dripper-first.png?raw=true)
+![](Grabbing%20Models%20And%20Textures/images/rippingtools/3dripper-first.png?raw=true)
 
 ##### Using Ninja Ripper
 
@@ -132,13 +116,13 @@ A 3D Ripper DX is a tool which enables you a grab frame data like 3d models, tex
 
 Usage and principles are almost the same as 3D Ripper DX, but Ninja does not support wireframe mode. Ninja Ripper also utilizes its own format ".RIP" which is exportable via Python plugin for 3D Studio Max. (Already included in software folder '/tool' directory).
 
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/rippingtools/ninjaripper-first.png?raw=true)
+![](Grabbing%20Models%20And%20Textures/images/rippingtools/ninjaripper-first.png?raw=true)
 
 #### Comparing Data
 
 From results, we are able to see one main difference between **Ninja Ripper** and **3D Ripper DX** is that tool captures the scene before any transformations from GPU shaders, it simply means that characters remain in the T-pose and additional/other geometry is also captured without rotation or deformation. That is one of the reasons why 3D Ripper DX is able to grab only what you are seeing on the screen.
 
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/rippingtools/compare-first.png?raw=true)
+![](Grabbing%20Models%20And%20Textures/images/rippingtools/compare-first.png?raw=true)
 
 #### Conclusion
 
@@ -166,34 +150,34 @@ Is an easy method, but time and computing-power consuming. The technique is pret
 
 So as first step I started game, in my case it was [Doom 2016 - Steam version](https://store.steampowered.com/app/379720/DOOM/). In the game I have used built-in Photo Mode where I taken around 300 screenshots from Free camera. Even that most of my screenshots are blured because I didnt turn off "Motion-blur" in Game Advanced Rendering settings, I think final result just came fine.
 
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/game_screenshot.jpg)
+![](Grabbing%20Models%20And%20Textures/images/photogrammery/game_screenshot.jpg)
 
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/grabbed_screenshots.png)
+![](Grabbing%20Models%20And%20Textures/images/photogrammery/grabbed_screenshots.png)
 
 Drag and drop photos into Agisoft Metashape do a **Photo alignment** which will generate a **Point-cloud data**.
 
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/image_alignment.png)
+![](Grabbing%20Models%20And%20Textures/images/photogrammery/image_alignment.png)
 
 After Point-cloud data just **build Mesh**
 
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/output.jpg)
+![](Grabbing%20Models%20And%20Textures/images/photogrammery/output.jpg)
 
 For a beter texture resolution you can rebuild Texture using **"Build Texture"** with higher resolution settings than defined, I have used 8k resolution which is 4 times bigger than source image resolution (1920x1080).
 
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/screenshoted_path.png)
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/output_recomputed_textures_8k.png)
+![](Grabbing%20Models%20And%20Textures/images/photogrammery/screenshoted_path.png)
+![](Grabbing%20Models%20And%20Textures/images/photogrammery/output_recomputed_textures_8k.png)
 
 So a little comparsion for final image quality or result.
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/comparsion.png)
+![](Grabbing%20Models%20And%20Textures/images/photogrammery/comparsion.png)
 
 I will not bother you with optimisations and what you can do as next step but I will recommend to reduce polygon mesh by using something like [Simplygon](https://www.simplygon.com/) or [InstaLOD](https://instalod.com/) or built-in functionality like [Cinema 4D](http://www.maxon.net) have called Polygon reduction.
 
-![](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/images/photogrammery/reduced_polygons_c4d.png)
+![](Grabbing%20Models%20And%20Textures/images/photogrammery/reduced_polygons_c4d.png)
 
 #### Files for Download:
 * [Source Images]()
 * [Agisoft project]()
-* [Exported Files](https://github.com/aknavj/articles/blob/master/Grabbing%20Models%20And%20Textures/files/export.7z)
+* [Exported Files](Grabbing%20Models%20And%20Textures/files/export.7z)
 
 #### Summary
 
@@ -203,11 +187,3 @@ I will not bother you with optimisations and what you can do as next step but I 
 | Textures | Generated | Single file | Might have big size. In-correct UV |
 | Shaders | Baked | Not included | Shaders are baked in texture |
 | Legal | Not altering with legal agreement | x | |
-
-### Game Modding
-
-The most easiest way to extract data from game is to have oficial tools from game/software vendor. 
-  
-## **Own Tool:** 
-
-### Techniques
