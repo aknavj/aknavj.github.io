@@ -1,6 +1,13 @@
-### THIS ARTICLE IS STILL UNDER CONSTRUCTION
+---
+layout: post
+title: Grabing Models and Textures from Game or 3D application
+tags: grabbing models 3d application textures
+categories: 3d
+---
 
-# Grabing Models and Textures from Game or 3D application
+```
+THIS ARTICLE IS STILL UNDER CONSTRUCTION
+```
 
 #### Goal
 ```
