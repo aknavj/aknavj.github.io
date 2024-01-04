@@ -4,9 +4,6 @@ author:
   name: Ondrej Vanka
   email: ondrej.vanka@proton.me
 description: "personal blogpost about development stuff"
-permalink: "/stories/:title"
-relative_permalinks: false
 
 # build settings
 remote_theme: jekyll/minima
-markdown: kramdown
