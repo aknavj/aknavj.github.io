@@ -177,7 +177,7 @@ I will not bother you with optimisations and what you can do as next step but I 
 #### Files for Download:
 * [Source Images]()
 * [Agisoft project]()
-* [Exported Files](/aknavj.github.io/assets/files/export.7z)
+* [Exported Files](/assets/files/export.7z)
 
 #### Summary
 
