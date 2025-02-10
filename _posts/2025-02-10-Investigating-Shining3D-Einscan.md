@@ -1,5 +1,7 @@
 > NOTE: This article is still under research, and there may be inconsistencies or incomplete/inaccurate information. Most of the work was conducted using version `EinScan HX v1.3.0.3` with the older SDK and `Shining3D/SDKDoc` as a reference point. However, recent updates have been largely based on in-depth investigation of `EinScan HX v1.4.1.2`.
 
+{:toc}
+
 # Einscan HX Soft (Community)
 
 The development and integration of third-party software with the EinScan HX scanner, produced by Shining3D, present considerable challenges due to the lack of a standardized and well-documented SDK. The official software development kit (SDK) lacks comprehensive documentation, and inconsistencies in SDK compatibility with various scanner hardware versions further complicate integration efforts. Thus, a thorough analysis of the scanner’s communication protocols and software architecture is required.
