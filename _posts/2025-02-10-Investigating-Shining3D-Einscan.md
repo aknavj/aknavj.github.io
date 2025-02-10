@@ -151,7 +151,7 @@ The EinScan HX software relies on various configuration files that store critica
   }
   ```
   </td>  
-  <td>Nastaveni MQTT Brokera</td>
+  <td>Setup of MQTT Broker</td>
   <td>C:\Shining3d\EinScan HX\</td>
 </tr>
 
@@ -353,7 +353,7 @@ These findings confirm that the EinScan HX scanner operates within a structured 
 
 ##### Explanation of MQTT components by example
 
-1. Publisher (pub)
+###### 1. Publisher (pub)
 
 	A publisher is a client that sends messages to a specific topic on the broker. Other clients can subscribe to these topics to receive the published messages.
 	
@@ -362,7 +362,7 @@ These findings confirm that the EinScan HX scanner operates within a structured 
 	- Publish Message `demo/ipc/pub/SnSyncService/moduleInitialized`
 	- Publish Message `demo/info/modules/c5msnsync/status`
 
-2. Subscriber (sub)
+###### 2. Subscriber (sub)
 
 	A subscriber is a client that listens for messages on a given topic. When a message is published to a topic the subscriber is interested in, it receives the message.
 	
@@ -371,7 +371,7 @@ These findings confirm that the EinScan HX scanner operates within a structured 
 	- Subscribe Request (id=5) `demo/ipc/req/SnSyncService/errorInfo`
 	- Subscribe Request (id=6) `demo/ipc/req/SnSyncService/exit`
 
-3. Requester (req)
+###### 3. Requester (req)
 	
 	A requester (or client) is a specific type of publisher that sends a request to another service and expects a response.
 	
@@ -379,7 +379,7 @@ These findings confirm that the EinScan HX scanner operates within a structured 
 	- Publish Message `demo/ipc/req/SnSyncService/execute`
 	- Publish Message `demo/ipc/req/SnSyncService/errorInfo`
 
-4. Responder (rep)
+###### 4. Responder (rep)
 
 	A responder listens for incoming requests and responds with data.
 	
@@ -387,7 +387,7 @@ These findings confirm that the EinScan HX scanner operates within a structured 
 	- Publish Message `demo/ipc/rep/c5msnsync`
 	- Publish Message `demo/ipc/rep/SnSyncService`
 
-5. Inter-Process Communication (IPC)
+###### 5. Inter-Process Communication (IPC)
 
 	IPC (Inter-Process Communication) refers to communication between different processes within a system. In MQTT, this often means local communication between different services within the same system.
 	
@@ -396,7 +396,7 @@ These findings confirm that the EinScan HX scanner operates within a structured 
 	- `demo/ipc/pub/SnSyncService/moduleInitialized`
 	- `demo/ipc/rep/c5msnsync`
 
-6. Message Broker
+###### 6. Message Broker
 
 	The broker is the central system that routes messages between publishers and subscribers. It does not generate messages but ensures that they are delivered reliably.
 
@@ -1592,13 +1592,13 @@ Reply:
 }
 ```
 
-# **Theoretical Description of the IPC (Inter-Process Communication) (For Now)
+# Theoretical Description of the IPC (Inter-Process Communication) (For Now)
 
 Inter-Process Communication (IPC) in the **EinScan HX software** enables multiple system components to exchange data efficiently while maintaining low latency and system stability. Given that the scanner operates in **real-time processing environments**, it requires a **fast, synchronized, and secure communication mechanism** between different software modules, background services, and the scanner hardware.
 
-The **IPC mechanism** in EinScan HX primarily relies on **Shared Memory** and **Message Queues**, allowing various system services `EXScan HX.exe`, `scanservice.exe`, `sn3DCommunity.exe` to communicate seamlessly.
+The **IPC mechanism** primarily relies on **Shared Memory** and **Message Queues**, allowing various system services `EXScan HX.exe`, `scanservice.exe`, `sn3DCommunity.exe` to communicate seamlessly.
 
-## **IPC Communication Model in EinScan HX**
+## **IPC Communication Model**
 
 The IPC architecture of the EinScan HX scanner consists of three fundamental layers.
 
@@ -1676,7 +1676,7 @@ At the highest level, the **EinScan HX software architecture** utilizes **ZeroMQ
 
 For real-time operations, **Shared Memory (SHM)** is used as the **fastest** IPC mechanism. It allows multiple processes to **read/write data** without constant network overhead.
 
-## Shared Memory Implementation in EinScan HX
+## Shared Memory Implementation
 
 - **Memory Buffer Creation:** `sn3DCommunity.exe` creates a **predefined shared memory segment** named `"SnSyncService_SharedMemory"`.
 - **Data Structure:** The memory buffer is allocated with **2GB** (`2147483648 bytes`), ensuring sufficient space for **high-resolution point cloud data**.
