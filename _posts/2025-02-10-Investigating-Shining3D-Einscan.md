@@ -51,9 +51,9 @@ The overarching goal of this research is to establish a functional understanding
   - [x] Metadata, Configs, and Logs
   - [x] Disassemble binaries and libraries
   - [ ] Monitor running:
-	- [x] process
-        - [ ] trees
-      	- [ ] IPC map events
+  	- [x] process
+	- [ ] trees
+	- [ ] IPC map events
   - [x] Monitor network activity
 - [x]  Identify the minimum requirements to establish TCP / MQTT / WebSocket communication with sn3DCommunity.exe running in the background
 - [ ] Write a utility "Hello World" program that extracts basic METADATA
