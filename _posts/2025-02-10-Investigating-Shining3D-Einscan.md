@@ -353,7 +353,7 @@ These findings confirm that the EinScan HX scanner operates within a structured 
 
 ##### Explanation of MQTT components by example
 
-1. Publisher (pub)
+* Publisher (pub)
 	
 > A publisher is a client that sends messages to a specific topic on the broker. Other clients can subscribe to these topics to receive the published messages.
 
@@ -362,7 +362,7 @@ Example:
 - Publish Message `demo/ipc/pub/SnSyncService/moduleInitialized`
 - Publish Message `demo/info/modules/c5msnsync/status`
   
-2. Subscriber (sub)
+* Subscriber (sub)
 
 > A subscriber is a client that listens for messages on a given topic. When a message is published to a topic the subscriber is interested in, it receives the message.
 
@@ -371,15 +371,15 @@ Example:
 - Subscribe Request (id=5) `demo/ipc/req/SnSyncService/errorInfo`
 - Subscribe Request (id=6) `demo/ipc/req/SnSyncService/exit`
 
-3. Requester (req)
+* Requester (req)
 
-A requester (or client) is a specific type of publisher that sends a request to another service and expects a response.
+> A requester (or client) is a specific type of publisher that sends a request to another service and expects a response.
 
 Example:
 - Publish Message `demo/ipc/req/SnSyncService/execute`
 - Publish Message `demo/ipc/req/SnSyncService/errorInfo`
 
-4. Responder (rep)
+* Responder (rep)
 
 > A responder listens for incoming requests and responds with data.
 
@@ -387,9 +387,9 @@ Example:
 - Publish Message `demo/ipc/rep/c5msnsync`
 - Publish Message `demo/ipc/rep/SnSyncService`
 
-5. Inter-Process Communication (IPC)
+* Inter-Process Communication (IPC)
 
-IPC (Inter-Process Communication) refers to communication between different processes within a system. In MQTT, this often means local communication between different services within
+> IPC (Inter-Process Communication) refers to communication between different processes within a system. In MQTT, this often means local communication between different services within
 the same system.
 
 Example:
@@ -397,7 +397,7 @@ Example:
 - `demo/ipc/pub/SnSyncService/moduleInitialized`
 - `demo/ipc/rep/c5msnsync`
 
-6. Message Broker
+* Message Broker
    
 > The broker is the central system that routes messages between publishers and subscribers. It does not generate messages but ensures that they are delivered reliably.
 
