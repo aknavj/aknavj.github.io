@@ -1,7 +1,5 @@
 > NOTE: This article is still under research, and there may be inconsistencies or incomplete/inaccurate information. Most of the work was conducted using version `EinScan HX v1.3.0.3` with the older SDK and `Shining3D/SDKDoc` as a reference point. However, recent updates have been largely based on in-depth investigation of `EinScan HX v1.4.1.2`.
 
-{:toc}
-
 # Einscan HX Soft (Community)
 
 The development and integration of third-party software with the EinScan HX scanner, produced by Shining3D, present considerable challenges due to the lack of a standardized and well-documented SDK. The official software development kit (SDK) lacks comprehensive documentation, and inconsistencies in SDK compatibility with various scanner hardware versions further complicate integration efforts. Thus, a thorough analysis of the scanner’s communication protocols and software architecture is required.
@@ -53,9 +51,9 @@ The overarching goal of this research is to establish a functional understanding
   - [x] Metadata, Configs, and Logs
   - [x] Disassemble binaries and libraries
   - [ ] Monitor running:
-  	- [x] process
-	- [ ] trees
-	- [ ] IPC map events
+	- [x] process
+  	- [ ] trees
+   	- [x] IPC map events
   - [x] Monitor network activity
 - [x]  Identify the minimum requirements to establish TCP / MQTT / WebSocket communication with sn3DCommunity.exe running in the background
 - [ ] Write a utility "Hello World" program that extracts basic METADATA
@@ -153,7 +151,7 @@ The EinScan HX software relies on various configuration files that store critica
   }
   ```
   </td>  
-  <td>Setup of MQTT Broker</td>
+  <td>MQTT Broker Setup</td>
   <td>C:\Shining3d\EinScan HX\</td>
 </tr>
 
@@ -355,52 +353,53 @@ These findings confirm that the EinScan HX scanner operates within a structured 
 
 ##### Explanation of MQTT components by example
 
-###### 1. Publisher (pub)
-
-	A publisher is a client that sends messages to a specific topic on the broker. Other clients can subscribe to these topics to receive the published messages.
+1. Publisher (pub)
 	
-	Example:
-	- Publish Message `demo/ipc/pub/SnSyncService/message`
-	- Publish Message `demo/ipc/pub/SnSyncService/moduleInitialized`
-	- Publish Message `demo/info/modules/c5msnsync/status`
+> A publisher is a client that sends messages to a specific topic on the broker. Other clients can subscribe to these topics to receive the published messages.
 
-###### 2. Subscriber (sub)
+Example:
+- Publish Message `demo/ipc/pub/SnSyncService/message`
+- Publish Message `demo/ipc/pub/SnSyncService/moduleInitialized`
+- Publish Message `demo/info/modules/c5msnsync/status`
+  
+2. Subscriber (sub)
 
-	A subscriber is a client that listens for messages on a given topic. When a message is published to a topic the subscriber is interested in, it receives the message.
-	
-	Example:
-	- Subscribe Request (id=1) `demo/info/#`
-	- Subscribe Request (id=5) `demo/ipc/req/SnSyncService/errorInfo`
-	- Subscribe Request (id=6) `demo/ipc/req/SnSyncService/exit`
+> A subscriber is a client that listens for messages on a given topic. When a message is published to a topic the subscriber is interested in, it receives the message.
 
-###### 3. Requester (req)
-	
-	A requester (or client) is a specific type of publisher that sends a request to another service and expects a response.
-	
-	Example:
-	- Publish Message `demo/ipc/req/SnSyncService/execute`
-	- Publish Message `demo/ipc/req/SnSyncService/errorInfo`
+Example:
+- Subscribe Request (id=1) `demo/info/#`
+- Subscribe Request (id=5) `demo/ipc/req/SnSyncService/errorInfo`
+- Subscribe Request (id=6) `demo/ipc/req/SnSyncService/exit`
 
-###### 4. Responder (rep)
+3. Requester (req)
 
-	A responder listens for incoming requests and responds with data.
-	
-	Example:
-	- Publish Message `demo/ipc/rep/c5msnsync`
-	- Publish Message `demo/ipc/rep/SnSyncService`
+A requester (or client) is a specific type of publisher that sends a request to another service and expects a response.
 
-###### 5. Inter-Process Communication (IPC)
+Example:
+- Publish Message `demo/ipc/req/SnSyncService/execute`
+- Publish Message `demo/ipc/req/SnSyncService/errorInfo`
 
-	IPC (Inter-Process Communication) refers to communication between different processes within a system. In MQTT, this often means local communication between different services within the same system.
-	
-	Example:
-	- `demo/ipc/req/SnSyncService/execute`
-	- `demo/ipc/pub/SnSyncService/moduleInitialized`
-	- `demo/ipc/rep/c5msnsync`
+4. Responder (rep)
 
-###### 6. Message Broker
+> A responder listens for incoming requests and responds with data.
 
-	The broker is the central system that routes messages between publishers and subscribers. It does not generate messages but ensures that they are delivered reliably.
+Example:
+- Publish Message `demo/ipc/rep/c5msnsync`
+- Publish Message `demo/ipc/rep/SnSyncService`
+
+5. Inter-Process Communication (IPC)
+
+IPC (Inter-Process Communication) refers to communication between different processes within a system. In MQTT, this often means local communication between different services within
+the same system.
+
+Example:
+- `demo/ipc/req/SnSyncService/execute`
+- `demo/ipc/pub/SnSyncService/moduleInitialized`
+- `demo/ipc/rep/c5msnsync`
+
+6. Message Broker
+   
+> The broker is the central system that routes messages between publishers and subscribers. It does not generate messages but ensures that they are delivered reliably.
 
 ##### Summary of needed MTQQ Topics
 
@@ -472,6 +471,8 @@ Reply
 
 ##### Wireshark Log Mapping
 
+<details>
+
 | **Wireshark Packet**  | **Diagram Component**             | **Event Description** |
 |-----------------------|---------------------------------|------------------------|
 | **239** (Connect Command)  | `Client.connect()` → `Broker`   | Client initiates connection to broker |
@@ -483,10 +484,11 @@ Reply
 | **257** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/info/modules/SnSyncService/status` |
 | **263** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/ipc/pub/SnSyncService/moduleInitialized` |
 
-
-<details>
+</details>
 
 ##### Wireshark Log
+
+<details>
 
 ```
 239	10.935874	127.0.0.1	127.0.0.1	MQTT	114	Connect Command
@@ -531,6 +533,8 @@ Reply
 
 ##### Wireshark Log Mapping
 
+<details>
+
 | **Wireshark Packet**  | **Diagram Component**             | **Event Description** |
 |-----------------------|---------------------------------|------------------------|
 | **273** (Connect Command)  | `Client.connect()` → `Broker`   | Client initiates connection to broker |
@@ -556,9 +560,12 @@ Reply
 | **313** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/ipc/req/SnSyncService/execute` |
 | **315** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/ipc/req/SnSyncService/execute` again |
 
-<details>
+</details>
 
 ##### Wireshark Log
+
+<details>
+
 ```
 273	11.025958	127.0.0.1	127.0.0.1	MQTT	106	Connect Command
 274	11.025966	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=1 Ack=63 Win=2619648 Len=0
@@ -615,6 +622,8 @@ Reply
 
 ##### Wireshark Log Mapping
 
+<details>
+
 | **Wireshark Packet**  | **Diagram Component**                     | **Event Description** |
 |-----------------------|-------------------------------------------|------------------------|
 | **544**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/rep/c5msnsync` |
@@ -656,9 +665,12 @@ Reply
 | **616**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
 | **618**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
 
-<details>
+</details>
 
 ##### Wireshark Log
+
+<details>
+
 ```
 544	17.512600	127.0.0.1	127.0.0.1	MQTT	195	Publish Message [demo/ipc/rep/c5msnsync], Publish Message [demo/ipc/rep/c5msnsync]
 545	17.512621	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=598 Ack=690 Win=2619136 Len=0
@@ -1594,11 +1606,11 @@ Reply:
 }
 ```
 
-# Theoretical Description of the IPC (Inter-Process Communication) (For Now)
+# "Theoretical Description" of the IPC (Inter-Process Communication) (For Now)
 
 Inter-Process Communication (IPC) in the **EinScan HX software** enables multiple system components to exchange data efficiently while maintaining low latency and system stability. Given that the scanner operates in **real-time processing environments**, it requires a **fast, synchronized, and secure communication mechanism** between different software modules, background services, and the scanner hardware.
 
-The **IPC mechanism** primarily relies on **Shared Memory** and **Message Queues**, allowing various system services `EXScan HX.exe`, `scanservice.exe`, `sn3DCommunity.exe` to communicate seamlessly.
+The **IPC mechanism** in EinScan HX primarily relies on **Shared Memory** and **Message Queues**, allowing various system services `EXScan HX.exe`, `scanservice.exe`, `sn3DCommunity.exe` to communicate seamlessly.
 
 ## **IPC Communication Model**
 
@@ -1766,16 +1778,22 @@ These discoveries pave the way for custom client development, third-party softwa
 
 ## Basic library overview
 
-	Note:
-	> Ignored libraries from the overview:
-	> - Win32 System Libraries
-	> - OSG - OpenSceneGraph
-	> - Default QT Libraries
-	> - Eigen Library
-	> - TBB
-	> - OpenCV
-	> ... and other not mentioned yet... (I am in the process of analyzing them)
+### Ignored libraries from the overview:
+- Win32 System Libraries https://learn.microsoft.com/en-us/windows/win32/api/
+- OSG - OpenSceneGraph https://openscenegraph.github.io/openscenegraph.io/
+- Default QT Libraries https://github.com/qt
+- Eigen Library https://gitlab.com/libeigen/eigen
+- TBB - Thread Building Blocks
+- OpenCV https://github.com/3MFConsortium/lib3mf
+- lib3mf https://github.com/3MFConsortium/lib3mf
+- libcrypto https://github.com/openssl/openssl
+- libpng
+- libz
+- libpg (postrgesql)
+- OpenMesh https://www.graphics.rwth-aachen.de/software/openmesh/
+- ... and other not mentioned yet... (I am in the process of analyzing them)
 
+### SN3DLibraries
 
 | **Library**                   | **Description**                                             | **Potential Usage** |
 |--------------------------------|------------------------------------------------------------|----------------------|
@@ -1969,5 +1987,6 @@ These discoveries pave the way for custom client development, third-party softwa
 - Dziedzic, R., & D’Souza, R. M. (2020). 3D Mesh Processing Using GAMer 2 to Enable Reaction-Diffusion Simulations in Realistic Cellular Geometries. PLoS Computational Biology, 16(8), e1007756. DOI: 10.1371/journal.pcbi.1007756.
 
 - Liu, C., Ma, Y., Wei, S., & Zhou, J. (2021). 3D Mesh Pre-Processing Method Based on Feature Point Detection and Anisotropic Filtering. Remote Sensing, 13(11), 2145. DOI: 10.3390/rs13112145.
+
 
 
