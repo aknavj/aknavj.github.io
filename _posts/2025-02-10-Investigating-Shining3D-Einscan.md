@@ -1823,16 +1823,32 @@ These discoveries pave the way for custom client development, third-party softwa
 | **libpassport**                 | User authentication and account management.             | Handling user login, account info retrieval, and authentication. |
 | **information_api**             | API for retrieving system and scanner information.       | - Fetching scanner model, firmware version, and device status.<br>- Monitoring scanning progress and diagnostics. |
 | **UsbTreeModel**                | USB device hierarchy and connection management.          | - Managing connected USB devices in a tree structure.<br>- Tracking scanner device connections and disconnections. |
-| **sn3DHIDCommunication**        | HID-based communication layer for scanner devices.        | - Communicating with **HID (Human Interface Device) peripherals**.<br>- Controlling scanner buttons and manual inputs. |
-| **snCameraControl**             | Advanced camera control API.                            | - Adjusting **focus, exposure, white balance, and auto-gain settings**.<br>- Controlling multiple cameras in a scanning system. |
-| **Sn3DTextureBasedTrack**       | Texture-based tracking and alignment.                   | - Aligning scans using **texture features instead of geometry**.<br>- Improving accuracy in **texture-rich object scanning**.<br>- Tracking movement in real-time scan sessions. |
-| **Sn3DMagic**                   | Memory and performance optimization.                   | Allocating and optimizing memory usage for 3D processes. |
-| **sn3DCamera**                  | Comprehensive 3D camera control and image processing.  | - Controlling camera (open, close, reset, start, stop).<br>- Adjusting exposure, gain, white balance, and auto-settings.<br>- Image processing (color modes, raw to RGB conversion, frame capture).<br>- Managing **GIGE camera configurations**.<br>- Handling **strobe and trigger** settings for precise frame capturing. |
 | **Sn3DAlgorithm**               | Core 3D processing algorithms and mesh operations.     | - **Poisson Reconstruction** for mesh generation.<br>- **QEM Simplification** for mesh optimization.<br>- **Hole filling and denoising**.<br>- **Cloud registration** for scan alignment.<br>- **Edge and feature extraction**. |
 | **Sn3DGPUAlgorithm**            | GPU-accelerated 3D processing functions.               | High-speed 3D operations using **parallel processing**. |
+| **SnCommon** | TODO | TODO |
+| **Sn3DAVXImp** | TODO | TODO |
+| **Sn3DCalibrationJR** | TODO | TODO | 
+| **sn3DCamera**                  | Comprehensive 3D camera control and image processing.  | - Controlling camera (open, close, reset, start, stop).<br>- Adjusting exposure, gain, white balance, and auto-settings.<br>- Image processing (color modes, raw to RGB conversion, frame capture).<br>- Managing **GIGE camera configurations**.<br>- Handling **strobe and trigger** settings for precise frame capturing. |
+| **snCameraControl**             | Advanced camera control API.                            | - Adjusting **focus, exposure, white balance, and auto-gain settings**.<br>- Controlling multiple cameras in a scanning system. |
+| **Sn3DColorCorrect** | TODO | TODO |
+| **Sn3DCork** | TODO | TODO |
+| **Sn3DDental** | TODO | TODO |
+| **Sn3DDigital** | TODO | TODO |
+| **Sn3DDLPdev** | TODO | TODO |
+| **Sn3DFaceUnity** | TODO | TODO |
+| **sn3DHandiDLPDev** | TODO | TODO |
+| **sn3DHandiSync** | TODO | TODO |
+| **sn3DHIDCommunication**        | HID-based communication layer for scanner devices.        | - Communicating with **HID (Human Interface Device) peripherals**.<br>- Controlling scanner buttons and manual inputs. |
+| **sn3DImageLoad** | TODO | TODO |
+| **Sn3DImageQueue** | TODO | TODO |
+| **sn3DLock** | TODO | TODO |
+| **Sn3DMagic**                   | Memory and performance optimization.                   | Allocating and optimizing memory usage for 3D processes. |
+| **Sn3DRegistration** | TODO | TODO |
+| **Sn3DScanSlam** | TODO | TODO |
+| **Sn3DSparseSolver** | TODO | TODO |
+| **Sn3DTextureBasedTrack**       | Texture-based tracking and alignment.                   | - Aligning scans using **texture features instead of geometry**.<br>- Improving accuracy in **texture-rich object scanning**.<br>- Tracking movement in real-time scan sessions. |
 | **Sn3DMeshProcess**             | Advanced mesh processing functions.                    | - Refinement, noise reduction, cutting, merging.<br>- Laplacian smoothing and edge-preserving filtering. |
-| **Sn3DTextureBasedTrack**       | Texture tracking for scan alignment.                   | Using **texture patterns** instead of geometry for precise tracking. |
-
+| **SnSharedBlock** | TODO | TODO | 
 
 ## Insight into EXScan HX.exe
 
