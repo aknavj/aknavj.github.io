@@ -1604,17 +1604,17 @@ The **IPC mechanism** primarily relies on **Shared Memory** and **Message Queues
 
 The IPC architecture of the EinScan HX scanner consists of three fundamental layers.
 
-1 Process Coordination Layer (High-Level Control)**
+1 Process Coordination Layer (High-Level Control)
 - Manages the **execution order** of scanning tasks.
 - Handles **message routing and synchronization** between services.
 - Uses **ZeroMQ (ZMQ) messaging framework** for inter-service coordination.
 
-2 Data Exchange Layer (Shared Memory & Message Queues)**
+2 Data Exchange Layer (Shared Memory & Message Queues)
 - Implements **Shared Memory Buffers** for **low-latency data transfer**.
 - Uses **Message Queues** to **schedule command execution**.
 - Ensures **real-time updates** via **memory-mapped files**.
 
-3 Hardware Abstraction Layer (Low-Level Operations)**
+3 Hardware Abstraction Layer (Low-Level Operations)
 - Interfaces with **scanner firmware** via **system drivers**.
 - Uses **memory-mapped input/output (MMIO)** to interact with sensors.
 - Supports **interrupt-driven data handling** for real-time processing.
@@ -1652,27 +1652,6 @@ At the highest level, the **EinScan HX software architecture** utilizes **ZeroMQ
 - **Request Transmission** – The **client module** (e.g., the GUI) sends scanning commands to the **backend services**.
 - **Service Execution** – The backend processes the request and communicates with **scanservice.exe** to retrieve sensor data.
 - **Response Handling** – The scan data is processed and transmitted back to the client via **shared memory** or a **message queue**.
-
-#### Diagram
-
-```
-(Client Process)                      (Backend Services)
- EXScan HX.exe                          scanservice.exe
-      |                                       |
-      |  (1) Request Scan Data                |
-      |-------------------------------------->|
-      |                                       |
-      |  (2) Retrieve Data From Scanner       |
-      |-------------------------------------->|
-      |                                       |
-      |  (3) Process & Store in Shared Mem    |
-      |<--------------------------------------|
-      |                                       |
-      |  (4) Send Data to GUI                 |
-      |-------------------------------------->|
-      |                                       |
-
-```
 
 ## Low-Level IPC: Shared Memory Communication
 
