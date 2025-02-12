@@ -7,7 +7,6 @@ description: "personal blogpost about development stuff"
 github_username: aknavj
 
 # build settings
-theme: minima
 remote_theme: jekyll/minima
 markdown: kramdown
 highlighter: rouge
