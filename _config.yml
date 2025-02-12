@@ -2,10 +2,10 @@
 title: "Aknavj Github"
 description: "personal blogpost about development stuff"
 github_username: aknavj
-author:
-  name: Ondrej Vanka
-  email: ondrej.vanka@proton.me
-  
+
+include:
+  - _pages
+
 # build settings
 remote_theme: pages-themes/midnight@v0.2.0
 markdown: kramdown
@@ -16,6 +16,34 @@ plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
   - jekyll-toc
+
+author:
+  name: Ondrej Vanka
+  links:
+    - label: "GitHub"
+      icon: "fab fa-fw fa-github"
+      url: "https://github.com/"
+    - label: "Email"
+      icon: "fas fa-fw fa-envelope-square"
+      url: "mailto:blog@fkrenzel.cz"
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: single
+      author_profile: true
+      read_time: false
+      comments: false
+      share: true
+      related: true
+  - scope:
+      path: "_pages"
+      type: pages
+    values:
+      layout: single
+      author_profile: true
   
 # orgs on front page
 featured_orgs:
