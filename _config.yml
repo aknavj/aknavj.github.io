@@ -16,21 +16,7 @@ plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
   - jekyll-toc
-
-permalink: /:categories/:title/
-
-nav:
-  - title: Home
-    url: /
-  - title: About
-    url: /about/
-  - title: Blog
-    url: /blog/
-
-# Pagination (optional, requires jekyll-paginate)
-paginate: 5
-paginate_path: "/blog/page:num/"
-
+  
 # orgs on front page
 featured_orgs:
   - renderwaves
