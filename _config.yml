@@ -1,7 +1,6 @@
 # global settings
 title: "Aknavj Github"
 description: "personal blogpost about development stuff"
-baseurl: ""
 github_username: aknavj
 author:
   name: Ondrej Vanka
@@ -17,7 +16,6 @@ plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
   - jekyll-toc
-
 
 permalink: /:categories/:title/
 
