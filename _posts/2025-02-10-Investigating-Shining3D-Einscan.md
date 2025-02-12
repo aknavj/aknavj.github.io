@@ -1,5 +1,13 @@
 > NOTE: This article is still under research, and there may be inconsistencies or incomplete/inaccurate information. Most of the work was conducted using version `EinScan HX v1.3.0.3` with the older SDK and `Shining3D/SDKDoc` as a reference point. However, recent updates have been largely based on in-depth investigation of `EinScan HX v1.4.1.2`.
 
+### Article changelog:
+
+```
+11. Feb 2025: Section for `Network and Reverse Engineering Insights` is rewritten and closed due to the PoC python script.
+10. Feb 2025: Draft of IPC Communication Model is created and most of the Binary libraries are mapped.
+9. Feb 2025: Draft of the article published, written form is restructured.
+```
+
 # Einscan HX Soft (Community)
 
 The development and integration of third-party software with the EinScan HX scanner, produced by Shining3D, present considerable challenges due to the lack of a standardized and well-documented SDK. The official software development kit (SDK) lacks comprehensive documentation, and inconsistencies in SDK compatibility with various scanner hardware versions further complicate integration efforts. Thus, a thorough analysis of the scanner’s communication protocols and software architecture is required.
@@ -50,17 +58,17 @@ The overarching goal of this research is to establish a functional understanding
 - [x] Map the general functionality of Shining3D in all aspects
   - [x] Metadata, Configs, and Logs
   - [x] Disassemble binaries and libraries
-  - [ ] Monitor running:
+  - [x] Monitor running:
 	- [x] process
-  	- [ ] trees
+  	- [x] trees
    	- [x] IPC map events
   - [x] Monitor network activity
-- [x]  Identify the minimum requirements to establish TCP / MQTT / WebSocket communication with sn3DCommunity.exe running in the background
-- [ ] Write a utility "Hello World" program that extracts basic METADATA
-- [ ] Develop a low-level IPC communication driver
-- [ ] Develop a backend quine-plugin
-- [ ] Develop a frontend plugin for the editor
-- [ ] Write tests
+- [x] Identify the minimum requirements to establish TCP / MQTT / WebSocket communication with `sn3DCommunity.exe` running in the background
+- [x] Write a utility "Hello World" program that extracts basic METADATA
+- [ ] Write a low-level IPC communication utility for extracting live scanner Image data
+- [ ] Develop a backend engine plugin
+- [ ] Develop a frontend plugin for the engine editor
+- [ ] ~~Write tests~~ (not needed)
 
 ## Architectural Analysis of EinScan HX Software
 
@@ -181,60 +189,52 @@ These files contain parameters for network communication, system preferences, an
 
 ## Network Communication Overview
 
-The EinScan HX scanner employs a robust network communication stack based on MQTT (Message Queuing Telemetry Transport) and ZeroMQ messaging. These protocols enable seamless, low-latency interaction between the scanner, the host PC, and third-party applications.
+The EinScan HX scanner utilizes an advanced network communication framework, integrating MQTT (Message Queuing Telemetry Transport) and ZeroMQ messaging to ensure seamless, low-latency interactions between the scanner, the host PC, and third-party applications.
 
-### MQTT-Based Communication Workflow
+### MQTT Communication Workflow
 
-- **Client Initialization:** The scanner establishes a connection with an MQTT broker, typically running on 127.0.0.1:1883.
-- **Authentication Handshake:** The scanner and software authenticate using an AES-encrypted challenge-response mechanism.
-- **Message Subscription:** The scanner subscribes to specific MQTT topics related to device metadata, command execution, and event notifications.
-- **Command Execution:** Requests are sent via JSON messages, specifying actions such as scanning mode activation, data retrieval, and sensor adjustments.
+1. **Client Initialization**: The scanner initiates a connection with an MQTT broker, typically hosted locally on 127.0.0.1:1883.
+2. **Authentication Handshake**: A secure, AES-encrypted challenge-response mechanism verifies the identity of the scanner and the software.
+3. **Message Subscription**: The scanner subscribes to MQTT topics that govern device metadata retrieval, command execution, and event notifications.
+4. **Command Execution**: JSON-structured requests are sent to manage scanning parameters, initiate scanning procedures, and retrieve data.
 
-### MTQQ Communication Archutecture Class Diagram
+### MQTT Communication Architecture
+
+The architecture of MQTT communication follows a well-defined message distribution system involving publishers, subscribers, and the broker. Below is a conceptual class diagram illustrating the structure:
 
 ```
- 					   +---------------------+
-					   |     MQTT Broker     |
-              				   |---------------------|
-              				   | + manageTopics()    |
-              				   | + dispatchMessages()|
-              				   +----------+----------+
-						      |
-                               +----------------------+----------------------+
-			       |                                       	     |
-		      +--------v--------+                             	+----v----+
-		      |    Publisher    |                             	| Subscriber|
-		      |-----------------|                             	|-----------|
-                      | - topic         |                             	| - topic   |
-		      | + publish(msg)  |                      		| + subscribe(topic) |
-		      +---------+-------+                             	+-----+-----+
-  			        |                                             |
-			        | Publishes messages                          | Receives messages
-				|                                             |
-			   +----v--------+                                +----v--------+
-			   | Client      |                             	  | Client      |
-  			   |-------------|                             	  |-------------|
-			   | - clientID  |                         	  | - clientID  |
-			   | + connect() |                         	  | + connect() |
-			   | + send()    |                         	  | + receive() |
-			   +------------+                          	  +-------------+
+        +---------------------+
+        |     MQTT Broker     |
+        |---------------------|
+        | + manageTopics()    |
+        | + dispatchMessages()|
+        +----------+----------+
+                   |
+        +----------------------+----------------------+
+        |                                            |
+    +--------v--------+                         +----v----+
+    |    Publisher    |                         | Subscriber |
+    |-----------------|                         |-----------|
+    | - topic         |                         | - topic   |
+    | + publish(msg)  |                         | + subscribe(topic) |
+    +---------+-------+                         +-----+-----+
+              |                                       |
+              | Publishes messages                   | Receives messages
+              |                                       |
+         +----v--------+                       +----v--------+
+         | Client      |                       | Client      |
+         |-------------|                       |-------------|
+         | - clientID  |                       | - clientID  |
+         | + connect() |                       | + connect() |
+         | + send()    |                       | + receive() |
+         +------------+                       +-------------+
 ```
 
-### Diagram Analysis
+### Network Traffic Analysis
 
-#### Wireshark setup
+By utilizing tools such as Wireshark, network interactions can be examined to extract vital information about the scanner’s communication process. Filters such as `tcp.port == 1883` capture MQTT communication, while `mqtt.msgtype == 12 || mqtt.msgtype == 13` helps isolate heartbeat signals.
 
-TCP filter for catching MQTT communication on default port
-```
-tcp.port == 1883
-```
-
-Wireshark filter for identifying heartbeat
-```
-mqtt.msgtype == 12 || mqtt.msgtype == 13
-```
-
-#### Diagram component methodology in Nutshell
+#### Wireshark Packet Analysis
 
 | Wireshark Packet | Diagram Component              | Event Description                        |
 |------------------|--------------------------------|------------------------------------------|
@@ -248,9 +248,7 @@ mqtt.msgtype == 12 || mqtt.msgtype == 13
 | 287 (PUBLISH - Execution Command) | Client → Broker → Scanner | Client sends command to scanner       |
 | 289 (PUBLISH - Execution Response) | Scanner → Broker → Client | Scanner responds to execution command |
 
-These findings confirm that the EinScan HX scanner operates within a structured and well-defined messaging framework, enabling secure and efficient machine-to-machine communication.
-
-#### Flowchart representing MQTT communication
+#### Flowchart representing MQTT communication flow
 
 ```
          +-------------+                  				+------------+
@@ -321,89 +319,15 @@ These findings confirm that the EinScan HX scanner operates within a structured 
 
 ```
 
-##### A Brief Explanation of Flow
+### MQTT Topic Routes 
 
-1. Client A (53813) establishes a connection with the broker via a TCP handshake.
-2. Client A sends an MQTT CONNECT command to the broker.
-3. Broker acknowledges with CONNACK.
-4. Client A publishes messages to `demo/info/modules/SnSyncService/password`.
-5. Client A subscribes to multiple topics (`demo/info/#`, `demo/ipc/rep/SnSyncService`).
-6. Broker sends a SUBACK response confirming the subscription.
-7. Client A publishes to `demo/info/modules/SnSyncService/status` and `demo/ipc/pub/SnSyncService/moduleInitialized`.
-8. Client B (53814) establishes a new connection with the broker via TCP handshake.
-9. Client B follows the same MQTT sequence: CONNECT → CONNACK → PUBLISH → SUBSCRIBE → SUBACK.
-10. Client B publishes messages related to `demo/info/modules/c5msnsync/password` and `demo/info/modules/c5msnsync/status`.
-11. Both clients start interacting with the broker:
- * Client A sends `demo/ipc/req/SnSyncService/execute`.
- * Broker responds with `demo/ipc/rep/c5msnsync`.
- * Client A publishes `demo/ipc/pub/SnSyncService/message` and `demo/ipc/pub/SnSyncService/moduleInitialized`.
+For examing trafic of the MQTT Topic Routes in postman use 'MQTT version 3' protocol with '"Auth Type = Basic Auth"'.
 
-##### MQTT topic routes from extracted communication
+> Username: SnSyncService
+> 
+> Password: X03MO1qnZdYdgyfeuILPmQ==
 
-###### Description Table
-
-| Component |	Role | Explanation
-| - | - | - |
-| Publisher (Pub) | Sends messages to topics |  A publisher is responsible for generating and sending data that subscribers are interested in. |
-| Subscriber (Sub) | Receives messages from topics| Subscribers register their interest in topics and consume messages when they are published.|
-| Requester (Req) | Sends requests to a service|  The requester sends a message (request) and expects a response from a responder (or service)|
-| Responder (Rep) | Handles requests and sends responses|  A responder waits for incoming requests and provides a response when needed.|
-| IPC (Inter-Process Communication) | Enables communication between system components| IPC in MQTT is used for communication between microservices or system components.|
-| Message Broker | Routes messages between publishers and subscribers| The broker manages message distribution between clients.|
-
-##### Explanation of MQTT components by example
-
-* Publisher (pub)
-	
-> A publisher is a client that sends messages to a specific topic on the broker. Other clients can subscribe to these topics to receive the published messages.
-
-Example:
-- Publish Message `demo/ipc/pub/SnSyncService/message`
-- Publish Message `demo/ipc/pub/SnSyncService/moduleInitialized`
-- Publish Message `demo/info/modules/c5msnsync/status`
-  
-* Subscriber (sub)
-
-> A subscriber is a client that listens for messages on a given topic. When a message is published to a topic the subscriber is interested in, it receives the message.
-
-Example:
-- Subscribe Request (id=1) `demo/info/#`
-- Subscribe Request (id=5) `demo/ipc/req/SnSyncService/errorInfo`
-- Subscribe Request (id=6) `demo/ipc/req/SnSyncService/exit`
-
-* Requester (req)
-
-> A requester (or client) is a specific type of publisher that sends a request to another service and expects a response.
-
-Example:
-- Publish Message `demo/ipc/req/SnSyncService/execute`
-- Publish Message `demo/ipc/req/SnSyncService/errorInfo`
-
-* Responder (rep)
-
-> A responder listens for incoming requests and responds with data.
-
-Example:
-- Publish Message `demo/ipc/rep/c5msnsync`
-- Publish Message `demo/ipc/rep/SnSyncService`
-
-* Inter-Process Communication (IPC)
-
-> IPC (Inter-Process Communication) refers to communication between different processes within a system. In MQTT, this often means local communication between different services within
-the same system.
-
-Example:
-- `demo/ipc/req/SnSyncService/execute`
-- `demo/ipc/pub/SnSyncService/moduleInitialized`
-- `demo/ipc/rep/c5msnsync`
-
-* Message Broker
-   
-> The broker is the central system that routes messages between publishers and subscribers. It does not generate messages but ensures that they are delivered reliably.
-
-##### Summary of needed MTQQ Topics
-
-###### Published Topics
+#### Published Topics
 - `demo/info/modules/SnSyncService/password`
 - `demo/info/modules/SnSyncService/status`
 - `demo/ipc/pub/SnSyncService/moduleInitialized`
@@ -413,7 +337,7 @@ Example:
 - `demo/ipc/req/SnSyncService/execute`
 - `demo/ipc/rep/c5msnsync`
 
-##### Subscribed Topics
+#### Subscribed Topics
 - `demo/info/#`
 - `demo/ipc/rep/SnSyncService`
 - `demo/ipc/cab/SnSyncService`
@@ -428,1183 +352,96 @@ Example:
 - `demo/ipc/rep/c5msnsync`
 - `demo/ipc/cab/c5msnsync`
 
-### **239** (Connect Command): Client.connect() → Broker:
+### PoC implementation in python
 
-Protocol info
+The following Python script establishes an MQTT client using the Paho MQTT library to connect to a broker, authenticate, and subscribe to multiple topics related to **SnSyncService**. It handles incoming messages, manages disconnections, and includes a reconnection strategy to ensure continuous operation. 
 
-```
-Header Flags: 0x10, Message Type: Connect Command
-Protocol Name: MQTT
-Version: MQTT v3.1.1 (4)
-```
+```python
+import paho.mqtt.client as mqtt
+import time
 
-Authentification Basic Info: (for now this must be catched from wireshark)
+# MQTT Configuration
+BROKER = "localhost"
+PORT = 1883
+TOPICS = [
+    "demo/info/#",
+    "demo/ipc/rep/SnSyncService",
+    "demo/ipc/cab/SnSyncService",
+    "demo/ipc/req/SnSyncService/execute",
+    "demo/ipc/req/SnSyncService/errorInfo",
+    "demo/ipc/req/SnSyncService/exit",
+    "demo/ipc/pub/SnSyncService/message",
+    "demo/ipc/pub/SnSyncService/moduleInitialized",
+    "demo/ipc/map/SnSyncService/aboutToExit",
+    "demo/ipc/map/SnSyncService/callback",
+    "demo/ipc/map/SnSyncService/calibrateCallback",
+    "demo/ipc/rep/c5msnsync",
+    "demo/ipc/cab/c5msnsync"
+]
 
-| | v1.4.1.2  | v1.3.0.3  | v1.3.0beta |
-|-| - | - | - |
-| Client ID | SnSyncService  |  passportcommunity  | No information |
-| Password | X03MO1qnZdYdgyfeuILPmQ==  |  kAFQmDzST7DWlj99KOF/cg== | No information |
-| Postman | Yes | No | Can't |
+# Authentication
+USERNAME = "SnSyncService"
+PASSWORD = "X03MO1qnZdYdgyfeuILPmQ=="
 
+# Reconnection Delay
+RETRY_DELAY = 5  # Seconds before retrying
 
-### **285** (PUBLISH - Heartbeat) Scanner → Broker → Client
+# Initialize MQTT Client
+client = mqtt.Client()
 
-|| v1.4.1.2  | v1.3.0.3  | v1.3.0beta |
-|-| - | - | - |
-|| `demo/info/modules/SnSyncService/status`  |  `PassPort/info/modules/passportcommunity/status`  |  v1.0/device/status |
-| Postman | Yes | No | Can't |
+# Set Authentication
+client.username_pw_set(USERNAME, PASSWORD)
 
-Reply
+# Callback for successful connection
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print(f"[INFO] Connected to MQTT Broker at {BROKER}:{PORT}")
+        for TOPIC in TOPICS:
+            client.subscribe(TOPIC)
+            print(f"[INFO] Subscribed to topic: {TOPIC}")
+    else:
+        print(f"[ERROR] Connection failed with return code {rc}")
+        print(f"[INFO] Retrying in {RETRY_DELAY} seconds...")
+        time.sleep(RETRY_DELAY)
+        client.reconnect()
 
-| v1.4.1.2  | v1.3.0.3  | v1.3.0beta |
-| - | - | - |
-| {"online":true} |  { }  | REQ: None REP: String |
+# Callback for message reception
+def on_message(client, userdata, msg):
+    try:
+        payload = msg.payload.decode("utf-8")
+        print(f"[INFO] Received message from {msg.topic}: {payload}")
+    except Exception as e:
+        print(f"[ERROR] Failed to process message: {e}")
 
-#### **Client A** Explanation of Flow stage:
+# Callback for connection loss
+def on_disconnect(client, userdata, rc):
+    print(f"[WARNING] Disconnected from MQTT Broker (Code: {rc})")
+    if rc != 0:
+        print(f"[INFO] Attempting to reconnect in {RETRY_DELAY} seconds...")
+        time.sleep(RETRY_DELAY)
+        client.reconnect()
 
-##### Summary of the Table:
+# Assign Callbacks
+client.on_connect = on_connect
+client.on_message = on_message
+client.on_disconnect = on_disconnect
 
-- **Connect Command & Acknowledgment:** Client establishes connection (239 → 241).
-- **Publishing Messages:** Messages are published to topics like `demo/info/modules/SnSyncService/password`, `status`, `moduleInitialized`.
-- **Subscription Process:** Client subscribes to multiple topics (245, 247, 249).
-- **Broker Acknowledgment:** The broker acknowledges the subscription requests (250, 253, 255, etc.).
-
-##### Wireshark Log Mapping
-
-<details>
-
-| **Wireshark Packet**  | **Diagram Component**             | **Event Description** |
-|-----------------------|---------------------------------|------------------------|
-| **239** (Connect Command)  | `Client.connect()` → `Broker`   | Client initiates connection to broker |
-| **241** (Connect Ack)      | `Broker` → `Client`           | Broker acknowledges connection |
-| **243** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes message to `demo/info/modules/SnSyncService/password` |
-| **245** (Subscribe Request) | `Subscriber.subscribe(topic)` → `Broker` | Client subscribes to multiple topics (`demo/info/#`, `demo/ipc/rep/SnSyncService`, etc.) |
-| **249** (Subscribe Request) | `Subscriber.subscribe(topic)` → `Broker` | Additional subscriptions (`demo/ipc/req/SnSyncService/exit`) |
-| **250-264** (Subscribe Ack) | `Broker` → `Subscriber`      | Broker acknowledges successful subscriptions |
-| **257** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/info/modules/SnSyncService/status` |
-| **263** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/ipc/pub/SnSyncService/moduleInitialized` |
-
-</details>
-
-##### Wireshark Log
-
-<details>
-
-```
-239	10.935874	127.0.0.1	127.0.0.1	MQTT	114	Connect Command
-240	10.935882	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=1 Ack=71 Win=2619648 Len=0
-241	10.937872	127.0.0.1	127.0.0.1	MQTT	48	Connect Ack
-242	10.937881	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=71 Ack=5 Win=2619648 Len=0
-243	10.937896	127.0.0.1	127.0.0.1	MQTT	127	Publish Message [demo/info/modules/SnSyncService/password]
-244	10.937900	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=71 Ack=88 Win=2619648 Len=0
-245	10.938029	127.0.0.1	127.0.0.1	MQTT	185	Subscribe Request (id=1) [demo/info/#], Subscribe Request (id=2) [demo/ipc/rep/SnSyncService], Subscribe Request (id=3) [demo/ipc/cab/SnSyncService], Publish Message [demo/info/modules/SnSyncService/status]
-246	10.938037	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=88 Ack=212 Win=2619648 Len=0
-247	10.938149	127.0.0.1	127.0.0.1	MQTT	128	Subscribe Request (id=4) [demo/ipc/req/SnSyncService/execute], Subscribe Request (id=5) [demo/ipc/req/SnSyncService/errorInfo]
-248	10.938154	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=88 Ack=296 Win=2619392 Len=0
-249	10.938218	127.0.0.1	127.0.0.1	MQTT	82	Subscribe Request (id=6) [demo/ipc/req/SnSyncService/exit]
-250	10.938220	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=1)
-251	10.938231	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=334 Ack=93 Win=2619648 Len=0
-252	10.938237	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=93 Ack=334 Win=2619392 Len=0
-253	10.938256	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=2)
-254	10.938261	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=334 Ack=98 Win=2619648 Len=0
-255	10.938274	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=3)
-256	10.938278	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=334 Ack=103 Win=2619648 Len=0
-257	10.938304	127.0.0.1	127.0.0.1	MQTT	101	Publish Message [demo/info/modules/SnSyncService/status]
-258	10.938308	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=334 Ack=160 Win=2619392 Len=0
-259	10.938326	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=4)
-260	10.938330	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=334 Ack=165 Win=2619392 Len=0
-261	10.938345	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=5)
-262	10.938349	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=334 Ack=170 Win=2619392 Len=0
-263	10.938360	127.0.0.1	127.0.0.1	MQTT	107	Publish Message [demo/ipc/pub/SnSyncService/moduleInitialized]
-264	10.938366	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=6)
-265	10.938371	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=397 Ack=175 Win=2619392 Len=0
-```
-
-</details>
-
-#### **Client B** Explanation of Flow stage 2
-
-##### Summary of the Table
-
-- **Connect Command & Acknowledgment:** Client establishes connection. (273 → 275).
-- **Subscription Process:** The client subscribes to multiple topics (e.g., `demo/info/#`, `demo/ipc/rep/c5msnsync`), and the broker acknowledges. (281, 285, 287, 295, 299, 305, 309, 311).
-- **Publishing Messages:** The client publishes messages related to module statuses and execution requests  (`demo/ipc/req/SnSyncService/execute`). (279, 293, 297, 303, 307).
-- **Broker Acknowledgments:** The broker confirms subscriptions but does not acknowledge individual message delivery (indicating MQTT QoS 0) (285, 287, 295, 299, 305, 309, 311).
-
-##### Wireshark Log Mapping
-
-<details>
-
-| **Wireshark Packet**  | **Diagram Component**             | **Event Description** |
-|-----------------------|---------------------------------|------------------------|
-| **273** (Connect Command)  | `Client.connect()` → `Broker`   | Client initiates connection to broker |
-| **275** (Connect Ack)      | `Broker` → `Client`           | Broker acknowledges connection |
-| **277** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes message to `demo/info/modules/c5msnsync/password` |
-| **279** (Subscribe Request) | `Subscriber.subscribe(topic)` → `Broker` | Client subscribes to multiple topics (`demo/info/#`, `demo/ipc/rep/c5msnsync`, etc.) and publishes `demo/info/modules/c5msnsync/status` |
-| **281** (Subscribe Ack) | `Broker` → `Subscriber` | Broker acknowledges subscription (id=1) |
-| **283** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/info/modules/SnSyncService/status` |
-| **285** (Subscribe Ack) | `Broker` → `Subscriber` | Broker acknowledges subscription (id=2) |
-| **287** (Subscribe Ack) | `Broker` → `Subscriber` | Broker acknowledges subscription (id=3) |
-| **289** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/info/modules/c5msnsync/status` |
-| **291** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/info/modules/c5msnsync/status` again |
-| **293** (Subscribe Request) | `Subscriber.subscribe(topic)` → `Broker` | Client subscribes to `demo/ipc/pub/SnSyncService/message` |
-| **295** (Subscribe Ack) | `Broker` → `Subscriber` | Broker acknowledges subscription (id=4) |
-| **297** (Subscribe Request) | `Subscriber.subscribe(topic)` → `Broker` | Client subscribes to `demo/ipc/pub/SnSyncService/moduleInitialized` |
-| **299** (Subscribe Ack) | `Broker` → `Subscriber` | Broker acknowledges subscription (id=5) |
-| **301** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/ipc/pub/SnSyncService/moduleInitialized` |
-| **303** (Subscribe Request) | `Subscriber.subscribe(topic)` → `Broker` | Client subscribes to `demo/ipc/map/SnSyncService/aboutToExit` |
-| **305** (Subscribe Ack) | `Broker` → `Subscriber` | Broker acknowledges subscription (id=6) |
-| **307** (Subscribe Request) | `Subscriber.subscribe(topic)` → `Broker` | Client subscribes to `demo/ipc/map/SnSyncService/callback` and `demo/ipc/map/SnSyncService/calibrateCallback` |
-| **309** (Subscribe Ack) | `Broker` → `Subscriber` | Broker acknowledges subscription (id=7) |
-| **311** (Subscribe Ack) | `Broker` → `Subscriber` | Broker acknowledges subscription (id=8) |
-| **313** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/ipc/req/SnSyncService/execute` |
-| **315** (Publish Message)  | `Publisher.publish(msg)` → `Broker` | Client publishes `demo/ipc/req/SnSyncService/execute` again |
-
-</details>
-
-##### Wireshark Log
-
-<details>
-
-```
-273	11.025958	127.0.0.1	127.0.0.1	MQTT	106	Connect Command
-274	11.025966	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=1 Ack=63 Win=2619648 Len=0
-275	11.027713	127.0.0.1	127.0.0.1	MQTT	48	Connect Ack
-276	11.027723	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=63 Ack=5 Win=2619648 Len=0
-277	11.027733	127.0.0.1	127.0.0.1	MQTT	123	Publish Message [demo/info/modules/c5msnsync/password]
-278	11.027737	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=63 Ack=84 Win=2619648 Len=0
-279	11.027874	127.0.0.1	127.0.0.1	MQTT	173	Subscribe Request (id=1) [demo/info/#], Subscribe Request (id=2) [demo/ipc/rep/c5msnsync], Subscribe Request (id=3) [demo/ipc/cab/c5msnsync], Publish Message [demo/info/modules/c5msnsync/status]
-280	11.027883	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=84 Ack=192 Win=2619648 Len=0
-281	11.027899	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=1)
-282	11.027906	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=192 Ack=89 Win=2619648 Len=0
-283	11.027912	127.0.0.1	127.0.0.1	MQTT	101	Publish Message [demo/info/modules/SnSyncService/status]
-284	11.027915	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=192 Ack=146 Win=2619648 Len=0
-285	11.027929	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=2)
-286	11.027933	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=192 Ack=151 Win=2619648 Len=0
-287	11.027945	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=3)
-288	11.027949	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=192 Ack=156 Win=2619392 Len=0
-289	11.027967	127.0.0.1	127.0.0.1	MQTT	97	Publish Message [demo/info/modules/c5msnsync/status]
-290	11.027974	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=397 Ack=228 Win=2619392 Len=0
-291	11.027981	127.0.0.1	127.0.0.1	MQTT	97	Publish Message [demo/info/modules/c5msnsync/status]
-292	11.027984	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=192 Ack=209 Win=2619392 Len=0
-293	11.028075	127.0.0.1	127.0.0.1	MQTT	85	Subscribe Request (id=4) [demo/ipc/pub/SnSyncService/message]
-294	11.028086	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=209 Ack=233 Win=2619392 Len=0
-295	11.028106	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=4)
-296	11.028114	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=233 Ack=214 Win=2619392 Len=0
-297	11.028268	127.0.0.1	127.0.0.1	MQTT	95	Subscribe Request (id=5) [demo/ipc/pub/SnSyncService/moduleInitialized]
-298	11.028276	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=214 Ack=284 Win=2619392 Len=0
-299	11.028290	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=5)
-300	11.028297	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=284 Ack=219 Win=2619392 Len=0
-301	11.028303	127.0.0.1	127.0.0.1	MQTT	107	Publish Message [demo/ipc/pub/SnSyncService/moduleInitialized]
-302	11.028306	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=284 Ack=282 Win=2619392 Len=0
-303	11.028361	127.0.0.1	127.0.0.1	MQTT	89	Subscribe Request (id=6) [demo/ipc/map/SnSyncService/aboutToExit]
-304	11.028368	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=282 Ack=329 Win=2619392 Len=0
-305	11.028380	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=6)
-306	11.028385	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=329 Ack=287 Win=2619392 Len=0
-307	11.028500	127.0.0.1	127.0.0.1	MQTT	137	Subscribe Request (id=7) [demo/ipc/map/SnSyncService/callback], Subscribe Request (id=8) [demo/ipc/map/SnSyncService/calibrateCallback]
-308	11.028509	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=287 Ack=422 Win=2619392 Len=0
-309	11.028520	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=7)
-310	11.028526	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=422 Ack=292 Win=2619392 Len=0
-311	11.028541	127.0.0.1	127.0.0.1	MQTT	49	Subscribe Ack (id=8)
-312	11.028545	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=422 Ack=297 Win=2619392 Len=0
-313	11.028733	127.0.0.1	127.0.0.1	MQTT	236	Publish Message [demo/ipc/req/SnSyncService/execute]
-314	11.028742	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=297 Ack=614 Win=2619136 Len=0
-315	11.028759	127.0.0.1	127.0.0.1	MQTT	236	Publish Message [demo/ipc/req/SnSyncService/execute]
-316	11.028765	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=397 Ack=420 Win=2619136 Len=0
-```
-</details>
-
-#### **Client A** Explanation of Flow Stage 3
-
-##### Summary of the Table
-
-> ```TODO```
-
-##### Wireshark Log Mapping
-
-<details>
-
-| **Wireshark Packet**  | **Diagram Component**                     | **Event Description** |
-|-----------------------|-------------------------------------------|------------------------|
-| **544**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/rep/c5msnsync` |
-| **546**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/rep/c5msnsync` |
-| **548**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/rep/c5msnsync` |
-| **550**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **552**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **554**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **556**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **558**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **560**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **562**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **564**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **566**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **568**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **570**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **572**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **574**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **576**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **578**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **580**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **582**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **584**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **586**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **588**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **590**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **592**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **594**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **596**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **598**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **600**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **602**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **604**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **606**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **608**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **610**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **612**              | `Publisher.publish(msg)` → `Broker`       | Client publishes message to `demo/ipc/req/SnSyncService/execute` |
-| **614**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **616**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-| **618**              | `Broker` → `Subscriber.receive(msg)`       | Broker forwards message to `demo/ipc/rep/c5msnsync` |
-
-</details>
-
-##### Wireshark Log
-
-<details>
-
-```
-544	17.512600	127.0.0.1	127.0.0.1	MQTT	195	Publish Message [demo/ipc/rep/c5msnsync], Publish Message [demo/ipc/rep/c5msnsync]
-545	17.512621	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=598 Ack=690 Win=2619136 Len=0
-546	17.512689	127.0.0.1	127.0.0.1	MQTT	143	Publish Message [demo/ipc/rep/c5msnsync]
-547	17.512701	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=792 Ack=538 Win=2619136 Len=0
-548	17.512727	127.0.0.1	127.0.0.1	MQTT	96	Publish Message [demo/ipc/rep/c5msnsync]
-549	17.512731	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=792 Ack=590 Win=2619136 Len=0
-550	17.512901	127.0.0.1	127.0.0.1	MQTT	259	Publish Message [demo/ipc/req/SnSyncService/execute]
-551	17.512909	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=590 Ack=1007 Win=2618624 Len=0
-552	17.512937	127.0.0.1	127.0.0.1	MQTT	259	Publish Message [demo/ipc/req/SnSyncService/execute]
-553	17.512947	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=690 Ack=813 Win=2618880 Len=0
-554	17.513375	127.0.0.1	127.0.0.1	MQTT	186	Publish Message [demo/ipc/rep/c5msnsync], Publish Message [demo/ipc/rep/c5msnsync]
-555	17.513382	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=813 Ack=832 Win=2618880 Len=0
-556	17.513400	127.0.0.1	127.0.0.1	MQTT	134	Publish Message [demo/ipc/rep/c5msnsync]
-557	17.513407	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1007 Ack=680 Win=2618880 Len=0
-558	17.513427	127.0.0.1	127.0.0.1	MQTT	96	Publish Message [demo/ipc/rep/c5msnsync]
-559	17.513432	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1007 Ack=732 Win=2618880 Len=0
-560	17.513568	127.0.0.1	127.0.0.1	MQTT	245	Publish Message [demo/ipc/req/SnSyncService/execute]
-561	17.513576	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=732 Ack=1208 Win=2618624 Len=0
-562	17.513592	127.0.0.1	127.0.0.1	MQTT	245	Publish Message [demo/ipc/req/SnSyncService/execute]
-563	17.513599	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=832 Ack=1014 Win=2618624 Len=0
-564	17.531794	127.0.0.1	127.0.0.1	MQTT	186	Publish Message [demo/ipc/rep/c5msnsync], Publish Message [demo/ipc/rep/c5msnsync]
-565	17.531806	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=1014 Ack=974 Win=2618880 Len=0
-566	17.531832	127.0.0.1	127.0.0.1	MQTT	134	Publish Message [demo/ipc/rep/c5msnsync]
-567	17.531842	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1208 Ack=822 Win=2618880 Len=0
-568	17.531864	127.0.0.1	127.0.0.1	MQTT	96	Publish Message [demo/ipc/rep/c5msnsync]
-569	17.531869	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1208 Ack=874 Win=2618880 Len=0
-570	17.532201	127.0.0.1	127.0.0.1	MQTT	246	Publish Message [demo/ipc/req/SnSyncService/execute]
-571	17.532211	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=874 Ack=1410 Win=2618368 Len=0
-572	17.532235	127.0.0.1	127.0.0.1	MQTT	246	Publish Message [demo/ipc/req/SnSyncService/execute]
-573	17.532243	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=974 Ack=1216 Win=2618368 Len=0
-574	17.551930	127.0.0.1	127.0.0.1	MQTT	186	Publish Message [demo/ipc/rep/c5msnsync], Publish Message [demo/ipc/rep/c5msnsync]
-575	17.551943	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=1216 Ack=1116 Win=2618624 Len=0
-576	17.551997	127.0.0.1	127.0.0.1	MQTT	134	Publish Message [demo/ipc/rep/c5msnsync]
-577	17.552006	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1410 Ack=964 Win=2618624 Len=0
-578	17.552029	127.0.0.1	127.0.0.1	MQTT	96	Publish Message [demo/ipc/rep/c5msnsync]
-579	17.552033	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1410 Ack=1016 Win=2618624 Len=0
-580	17.552327	127.0.0.1	127.0.0.1	MQTT	242	Publish Message [demo/ipc/req/SnSyncService/execute]
-581	17.552337	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=1016 Ack=1608 Win=2618112 Len=0
-582	17.552388	127.0.0.1	127.0.0.1	MQTT	242	Publish Message [demo/ipc/req/SnSyncService/execute]
-583	17.552397	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=1116 Ack=1414 Win=2618368 Len=0
-584	17.553420	127.0.0.1	127.0.0.1	MQTT	203	Publish Message [demo/ipc/rep/c5msnsync], Publish Message [demo/ipc/rep/c5msnsync]
-585	17.553431	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=1414 Ack=1275 Win=2618368 Len=0
-586	17.553474	127.0.0.1	127.0.0.1	MQTT	151	Publish Message [demo/ipc/rep/c5msnsync]
-587	17.553489	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1608 Ack=1123 Win=2618624 Len=0
-588	17.553547	127.0.0.1	127.0.0.1	MQTT	96	Publish Message [demo/ipc/rep/c5msnsync]
-589	17.553554	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1608 Ack=1175 Win=2618624 Len=0
-590	17.553862	127.0.0.1	127.0.0.1	MQTT	246	Publish Message [demo/ipc/req/SnSyncService/execute]
-591	17.553870	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=1175 Ack=1810 Win=2617856 Len=0
-592	17.553923	127.0.0.1	127.0.0.1	MQTT	246	Publish Message [demo/ipc/req/SnSyncService/execute]
-593	17.553931	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=1275 Ack=1616 Win=2618112 Len=0
-594	17.554622	127.0.0.1	127.0.0.1	MQTT	193	Publish Message [demo/ipc/rep/c5msnsync], Publish Message [demo/ipc/rep/c5msnsync]
-595	17.554630	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=1616 Ack=1424 Win=2618368 Len=0
-596	17.554680	127.0.0.1	127.0.0.1	MQTT	141	Publish Message [demo/ipc/rep/c5msnsync]
-597	17.554689	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1810 Ack=1272 Win=2618368 Len=0
-598	17.554711	127.0.0.1	127.0.0.1	MQTT	96	Publish Message [demo/ipc/rep/c5msnsync]
-599	17.554715	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=1810 Ack=1324 Win=2618368 Len=0
-600	17.554921	127.0.0.1	127.0.0.1	MQTT	241	Publish Message [demo/ipc/req/SnSyncService/execute]
-601	17.554928	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=1324 Ack=2007 Win=2617856 Len=0
-602	17.554982	127.0.0.1	127.0.0.1	MQTT	241	Publish Message [demo/ipc/req/SnSyncService/execute]
-603	17.554991	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=1424 Ack=1813 Win=2617856 Len=0
-604	17.555359	127.0.0.1	127.0.0.1	MQTT	183	Publish Message [demo/ipc/rep/c5msnsync], Publish Message [demo/ipc/rep/c5msnsync]
-605	17.555366	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=1813 Ack=1563 Win=2618112 Len=0
-606	17.555383	127.0.0.1	127.0.0.1	MQTT	131	Publish Message [demo/ipc/rep/c5msnsync]
-607	17.555390	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=2007 Ack=1411 Win=2618368 Len=0
-608	17.555408	127.0.0.1	127.0.0.1	MQTT	96	Publish Message [demo/ipc/rep/c5msnsync]
-609	17.555414	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=2007 Ack=1463 Win=2618112 Len=0
-610	17.557462	127.0.0.1	127.0.0.1	MQTT	245	Publish Message [demo/ipc/req/SnSyncService/execute]
-611	17.557470	127.0.0.1	127.0.0.1	TCP	44	1883 → 53814 [ACK] Seq=1463 Ack=2208 Win=2617600 Len=0
-612	17.557488	127.0.0.1	127.0.0.1	MQTT	245	Publish Message [demo/ipc/req/SnSyncService/execute]
-613	17.557494	127.0.0.1	127.0.0.1	TCP	44	53813 → 1883 [ACK] Seq=1563 Ack=2014 Win=2617600 Len=0
-614	17.575507	127.0.0.1	127.0.0.1	MQTT	204	Publish Message [demo/ipc/rep/c5msnsync], Publish Message [demo/ipc/rep/c5msnsync]
-615	17.575528	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=2014 Ack=1723 Win=2618112 Len=0
-616	17.575601	127.0.0.1	127.0.0.1	MQTT	152	Publish Message [demo/ipc/rep/c5msnsync]
-617	17.575613	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=2208 Ack=1571 Win=2618112 Len=0
-618	17.575641	127.0.0.1	127.0.0.1	MQTT	96	Publish Message [demo/ipc/rep/c5msnsync]
-619	17.575645	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=2208 Ack=1623 Win=2618112 Len=0
-626	18.032947	127.0.0.1	127.0.0.1	MQTT	216	Publish Message [demo/ipc/pub/SnSyncService/message]
-627	18.032963	127.0.0.1	127.0.0.1	TCP	44	1883 → 53813 [ACK] Seq=2014 Ack=1895 Win=2617856 Len=0
-628	18.033031	127.0.0.1	127.0.0.1	MQTT	216	Publish Message [demo/ipc/pub/SnSyncService/message]
-629	18.033043	127.0.0.1	127.0.0.1	TCP	44	53814 → 1883 [ACK] Seq=2208 Ack=1795 Win=2617856 Len=0
-```
-
-</details>
-
-#### MQTT Event Topics
-
-The following topics can be catched in PostMan
-
-##### MQTT EinscanHX Launch sequence (services startup)
-
-The important trafic is mostly between two topics `demo/ipc/req/SnSyncService/execute` and `demo/ipc/rep/c5msnsync`. Where the device information is obtained.
-
-###### Topic `demo/ipc/req/SnSyncService/execute`
-Replies:
-
-<details>
-
-```json
-{
-    "id": 0,
-    "params": {
-        "cmd": "getProperty",
-        "params": [
-            null,
-            "GetDeviceTypeE3",
-            null
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 1,
-    "params": {
-        "cmd": "openDevices",
-        "params": [
-            {
-                "type": "E3"
-            }
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 2,
-    "params": {
-        "cmd": "setFlagBitInterface",
-        "params": [
-            2364629105280,
-            "AutoReconnectControl",
-            false
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 3,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2364629105280,
-            "MonoStrobeWorkMode",
-            1
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 4,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2364629105280,
-            "ColorStrobeWorkMode",
-            1
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 5,
-    "params": {
-        "cmd": "getProperty",
-        "params": [
-            2364629105280,
-            "CameraSerial",
-            null
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 6,
-    "params": {
-        "cmd": "getProperty",
-        "params": [
-            2364629105280,
-            "CameraResolution",
-            null
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 7,
-    "params": {
-        "cmd": "getProperty",
-        "params": [
-            2364629105280,
-            "CameraCount",
-            null
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 8,
-    "params": {
-        "cmd": "getProperty",
-        "params": [
-            2364629105280,
-            "FirmwareVersion",
-            null
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
+# Connect to MQTT Broker
+while True:
+    try:
+        print(f"[INFO] Connecting to MQTT Broker {BROKER}:{PORT}...")
+        client.connect(BROKER, PORT, 60)
+        client.loop_forever()  # Keep listening for messages
+    except Exception as e:
+        print(f"[ERROR] MQTT Connection Failed: {e}")
+        print(f"[INFO] Retrying in {RETRY_DELAY} seconds...")
+        time.sleep(RETRY_DELAY)
 
 ```
 
-</details>
+### Conclusion
 
-###### Topic `demo/ipc/rep/c5msnsync`
-Replies:
-
-<details>
-
-```json
-{
-    "id": 0,
-    "params": {
-        "index": 0,
-        "result": "E3"
-    },
-    "type": "resultReady"
-}
-
-{
-    "id": 0,
-    "type": "finished"
-}
-
-{
-    "id": 1,
-    "params": {
-        "index": 0,
-        "result": 3241002797136
-    },
-    "type": "resultReady"
-}
-
-{
-    "id": 1,
-    "type": "finished"
-}
-
-{
-    "id": 2,
-    "params": {
-        "index": 0,
-        "result": null
-    },
-    "type": "resultReady"
-}
-
-{
-    "id": 2,
-    "type": "finished"
-}
-
-{
-    "id": 3,
-    "params": {
-        "index": 0,
-        "result": null
-    },
-    "type": "resultReady"
-}
-
-{
-    "id": 3,
-    "type": "finished"
-}
-
-{
-    "id": 4,
-    "params": {
-        "index": 0,
-        "result": null
-    },
-    "type": "resultReady"
-}
-
-{
-    "id": 4,
-    "type": "finished"
-}
-
-{
-    "id": 5,
-    "params": {
-        "index": 0,
-        "result": "SH77690199439179785"
-    },
-    "type": "resultReady"
-}
-
-{
-    "id": 5,
-    "type": "finished"
-}
-
-{
-    "id": 6,
-    "params": {
-        "index": 0,
-        "result": [
-            1280,
-            1024
-        ]
-    },
-    "type": "resultReady"
-}
-
-{
-    "id": 6,
-    "type": "finished"
-}
-
-{
-    "id": 7,
-    "params": {
-        "index": 0,
-        "result": 1
-    },
-    "type": "resultReady"
-}
-
-{
-    "id": 7,
-    "type": "finished"
-}
-
-{
-    "id": 8,
-    "params": {
-        "index": 0,
-        "result": "E3HXV218_\u0002312EN"
-    },
-    "type": "resultReady"
-}
-
-```
-
-</details>
-
-
-###### Topic `demo/pub/SnSyncService/message`
-Replies:
-<details>
-
-```json
-{
-    "list": [
-        "Einscan3",
-        "011402D3241A00",
-        "Connected",
-        0
-    ],
-    "msgName": "deviceState",
-    "pluginName": "3DDigitalSyncInterface",
-    "version": "2.57.1"
-}
-```
-
-</details>
-
-##### MQTT EinscanHX Launch ScanMode - Rapid Scan (Device Setup and information)
-
-When Scan Mode beign executed the communication catches the setup and basic information obtaining from device this is mapped from (`id: 9` → `id: 33`) between MQTT topics: (requester) `demo/ipc/req/SnSyncService/execute` and (replyier) `demo/ipc/rep/c5msnsync`.
-
-###### Topic `demo/ipc/req/SnSyncService/execute`
-Replies:
-<details>
-
-```json:
-{
-    "id": 9,
-    "params": {
-        "cmd": "getProperty",
-        "params": [
-            2253253317200,
-            "CameraCount",
-            null
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 10,
-    "params": {
-        "cmd": "getProperty",
-        "params": [
-            2253253317200,
-            "CameraCount",
-            null
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 11,
-    "params": {
-        "cmd": "getProperty",
-        "params": [
-            2253253317200,
-            "CameraCount",
-            null
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 12,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "ScanIndication",
-            0
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 13,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "Indication",
-            0
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 14,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "ProjectorControl",
-            1
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 15,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "ScanIndication",
-            0
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 16,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "Indication",
-            0
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 17,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "MonoStrobeWorkMode",
-            1
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 19,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "ScanTriggerPeriod",
-            33000
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 20,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "LaserSwitchState",
-            false
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 21,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "CameraGainAndExposure",
-            [
-                0,
-                7,
-                7
-            ]
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 22,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "CameraGainAndExposure",
-            [
-                1,
-                7,
-                7
-            ]
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 23,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "LedStrobeLightTime",
-            {
-                "DEVICE": 0,
-                "LIGHTTIME": 500
-            }
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 24,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "LedStrobeLightTime",
-            {
-                "DEVICE": 1,
-                "LIGHTTIME": 6000
-            }
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 25,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "DeviceLightTime",
-            {
-                "DEVICE": 2,
-                "LIGHTTIME": 7000
-            }
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 26,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "StrobeLuminance",
-            {
-                "COLORLED": 100,
-                "MONOLED": 100,
-                "MONOLEDOFCOLOR": 0
-            }
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 27,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "CameraGainAndExposure",
-            [
-                2,
-                3,
-                6
-            ]
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 28,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "LedStrobeLightTime",
-            {
-                "DEVICE": 0,
-                "LIGHTTIME": 500
-            }
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 29,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "LedStrobeLightTime",
-            {
-                "DEVICE": 1,
-                "LIGHTTIME": 6000
-            }
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 30,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "TriggerMode",
-            1
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 31,
-    "params": {
-        "cmd": "setFlagBitInterface",
-        "params": [
-            2253253317200,
-            "ImageStream",
-            true
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 32,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "ScanIndication",
-            0
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-{
-    "id": 33,
-    "params": {
-        "cmd": "setProperty",
-        "params": [
-            2253253317200,
-            "Indication",
-            0
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": ""
-    },
-    "requester": "c5msnsync"
-}
-
-```
-
-</details>
-
-###### Topic `demo/ipc/rep/c5msnsync`
-Replies
-
-<details>
-
-```json
-{"id":9,"params":{"index":0,"result":1},"type":"resultReady"}
-{"id":9,"type":"finished"}
-
-{"id":10,"params":{"index":0,"result":1},"type":"resultReady"}
-{"id":10,"type":"finished"}
-
-{"id":11,"params":{"index":0,"result":1},"type":"resultReady"}
-{"id":11,"type":"finished"}
-
-{"id":12,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":12,"type":"finished"}
-
-{"id":13,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":13,"type":"finished"}
-
-{"id":14,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":14,"type":"finished"}
-
-{"id":15,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":15,"type":"finished"}
-
-{"id":16,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":16,"type":"finished"}
-
-{"id":17,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":17,"type":"finished"}
-
-{"id":18,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":18,"type":"finished"}
-
-{"id":19,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":19,"type":"finished"}
-
-{"id":20,"params":{"error":779,"why":""},"type":"exception"}
-{"id":20,"type":"finished"}
-
-{"id":21,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":21,"type":"finished"}
-
-{"id":22,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":22,"type":"finished"}
-
-{"id":23,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":23,"type":"finished"}
-
-{"id":24,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":24,"type":"finished"}
-
-{"id":25,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":25,"type":"finished"}
-
-{"id":26,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":26,"type":"finished"}
-
-{"id":27,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":27,"type":"finished"}
-
-{"id":28,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":28,"type":"finished"}
-
-{"id":29,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":29,"type":"finished"}
-
-{"id":30,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":30,"type":"finished"}
-
-{"id":31,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":31,"type":"finished"}
-
-{"id":32,"params":{"index":0,"result":null},"type":"resultReady"}
-{"id":32,"type":"finished"}
-```
-
-</details>
-
-##### MQTT EinscanHX Launch ScanMode - Rapid Scan (IPC setup for ImageData)
-
-###### Topic `demo/ipc/map/SnSyncService/callback`
-Reply:
-```json
-{
-    "id": 0,
-    "params": {
-        "callbackName": "imageData",
-        "list": [
-            "Einscan3",
-            "011402D3241A00",
-            "GrayImage",
-            [
-                "InternalE3Image1",
-                "InternalE3Image2"
-            ],
-            {
-                "camera0": {
-                    "channel": 1,
-                    "height": 1024,
-                    "sharedName": "InternalE3Image1",
-                    "size": 1310720,
-                    "width": 1280
-                },
-                "camera1": {
-                    "channel": 1,
-                    "height": 1024,
-                    "sharedName": "InternalE3Image2",
-                    "size": 1310720,
-                    "width": 1280
-                },
-                "imageCount": 2
-            }
-        ],
-        "pluginName": "3DDigitalSyncInterface",
-        "version": "2.57.1"
-    }
-}
-```
-
-###### Topic `demo/ipc/cab/SnSyncService`
-Reply:
-```json
-{
-    "callbacker": "c5msnsync",
-    "id": 0,
-    "method": "callback",
-    "params": {
-        "results": [
-            null
-        ]
-    },
-    "type": "resultReady"
-}
-```
+The EinScan HX scanner employs a structured and secure network communication system that ensures reliable data transmission and command execution. Through MQTT and ZeroMQ, it achieves low-latency synchronization between the scanning software and the hardware, facilitating real-time adjustments and data retrieval.
 
 # "Theoretical Description" of the IPC (Inter-Process Communication) (For Now)
 
@@ -1848,7 +685,7 @@ These discoveries pave the way for custom client development, third-party softwa
 | **Sn3DSparseSolver** | TODO | TODO |
 | **Sn3DTextureBasedTrack**       | Texture-based tracking and alignment.                   | - Aligning scans using **texture features instead of geometry**.<br>- Improving accuracy in **texture-rich object scanning**.<br>- Tracking movement in real-time scan sessions. |
 | **Sn3DMeshProcess**             | Advanced mesh processing functions.                    | - Refinement, noise reduction, cutting, merging.<br>- Laplacian smoothing and edge-preserving filtering. |
-| **SnSharedBlock** | TODO | TODO | 
+| **SnSharedBlock**               | Shared memory management for 3D data structures.        | - Managing **shared blocks** for point clouds, meshes, frames, and custom data.<br>- Allocating, modifying, and retrieving memory blocks.<br>- Handling **partial data** for improved storage efficiency.<br>- Structuring **data offsets** for color, normal, and texture mapping.<br>- Supporting **multi-threaded** and **multi-session** data access. |
 
 ## Insight into EXScan HX.exe
 
@@ -1962,46 +799,103 @@ These discoveries pave the way for custom client development, third-party softwa
 
 ## References
 
-- OASIS. MQTT Version 3.1.1 Plus Errata 01. OASIS Standard, December 2015. Available at: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html.
-
-- OASIS. MQTT Version 5.0. OASIS Standard, March 2019. Available at: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html.
-
-- Eclipse Foundation. Eclipse Paho MQTT Documentation. Eclipse Paho Project. Available at: https://www.eclipse.org/paho/.
-
-- HiveMQ. MQTT Essentials – A Technical Deep Dive into MQTT Protocol. HiveMQ Blog Series. Available at: https://www.hivemq.com/mqtt-essentials/.
-
-- Wireshark Foundation. Wireshark MQTT Protocol Dissector Documentation. Available at: https://wiki.wireshark.org/MQTT.
-
-- Wireshark Foundation. Filtering MQTT Traffic in Wireshark – A Guide for Debugging and Performance Analysis. Available at: https://www.wireshark.org/docs/dfref/m/mqtt.html.
-
-- Kerrisk, M. Linux Inter-Process Communication (IPC) Mechanisms. Linux Manual Pages, 2023. Available at: https://man7.org/linux/man-pages/man7/ipc.7.html.
-
+ RANSAC: Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography. 1981 [[paper]](http://www.cs.ait.ac.th/~mdailey/cvreadings/Fischler-RANSAC.pdf)
+- Locally Optimized RANSAC. 2003 [[paper]](ftp://cmp.felk.cvut.cz/pub/cmp/articles/matas/chum-dagm03.pdf)
+- Graph-cut RANSAC. CVPR'2018 [[paper]](https://arxiv.org/abs/1706.00984) [[code]](https://github.com/danini/graph-cut-ransac)
+- MAGSAC: Marginalizing Sample Consensus. CVPR'2019 [[paper]](http://openaccess.thecvf.com/content_CVPR_2019/papers/Barath_MAGSAC_Marginalizing_Sample_Consensus_CVPR_2019_paper.pdf) [[code]](https://github.com/danini/magsac)
+- VFC: A Robust Method for Vector Field Learning with Application To Mismatch Removing. CVPR'2011 [[paper]](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.721.5913&rep=rep1&type=pdf)
+- In Search of Inliers: 3D Correspondence by Local and Global Voting. CVPR'2014 [[paper]](http://www.cv-foundation.org/openaccess/content_cvpr_2014/papers/Buch_In_Search_of_2014_CVPR_paper.pdf)
+- FGR: Fast Global Registration. ECCV'2016 [[paper]](https://vladlen.info/publications/fast-global-registration/) [[code]](https://github.com/intel-isl/FastGlobalRegistration)
+- Ranking 3D Feature Correspondences Via Consistency Voting. PRL'2019 [[paper]](https://doi.org/10.1016/j.patrec.2018.11.018)
+- An Accurate and Efficient Voting Scheme for a Maximally All-Inlier 3D Correspondence Set. TPAMI'2020 [[paper]](https://ieeexplore.ieee.org/ielx7/34/4359286/08955806.pdf) 
+- GORE: Guaranteed Outlier Removal for Point Cloud Registration with Correspondences. TPAMI'2018 [[paper]](https://arxiv.org/abs/1711.10209) [[code]](https://cs.adelaide.edu.au/~aparra/project/gore/)
+- A Polynomial-time Solution for Robust Registration with Extreme Outlier Rates. RSS'2019 [[paper]](https://arxiv.org/abs/1903.08588)
+- Graduated Non-Convexity for Robust Spatial Perception: From Non-Minimal Solvers to Global Outlier Rejection. ICRA'2020 [[paper]](https://arxiv.org/abs/1909.08605)
+- TEASER: Fast and Certifiable Point Cloud Registration. T-RO'2020 [[paper]](https://arxiv.org/abs/2001.07715) [[code]](https://github.com/MIT-SPARK/TEASER-plusplus)
+- One Ring to Rule Them All: Certifiably Robust Geometric Perception with Outliers. NeurIPS'2020 [[paper]](https://arxiv.org/abs/2006.06769)
+- SDRSAC: Semidefinite-Based Randomized Approach for Robust Point Cloud Registration without Correspondences. CVPR'2019 [[paper]](https://arxiv.org/abs/1904.03483) [[code]](https://github.com/intellhave/SDRSAC)
+- Robust Low-Overlap 3D Point Cloud Registration for Outlier Rejection. ICRA'2019 [[paper]](https://arpg.colorado.edu/papers/hmrf_icp.pdf)
+- ICOS: Efficient and Highly Robust Rotation Search and Point Cloud Registration with Correspondences. arxiv'2021 [[paper]](https://arxiv.org/pdf/2104.14763.pdf)
+- Fast Semantic-Assisted Outlier Removal for Large-scale Point Cloud Registration. arxiv'2022 [[paper]](https://arxiv.org/pdf/2202.10579.pdf)
+- A Single Correspondence Is Enough: Robust Global Registration to Avoid Degeneracy in Urban Environments. ICRA'2022 [[paper]](https://arxiv.org/pdf/2203.06612.pdf) [[code]](https://github.com/url-kaist/quatro)
+- SC^2-PCR: A Second Order Spatial Compatibility for Efficient and Robust Point Cloud Registration. CVPR'2022 [[paper]](https://arxiv.org/abs/2203.14453) [[code]](https://github.com/ZhiChen902/SC2-PCR)
+- HKS: A Concise and Provably Informative Multi‐Scale Signature Based on Heat Diffusion. CGF'2009 [[paper]](http://www.cs.jhu.edu/~misha/ReadingSeminar/Papers/Sun09.pdf)
+- Harris3D: a robust extension of the harris operator for interest point detection on 3D meshes. VC'2011 [[paper]](http://www.ivan-sipiran.com/papers/SB11b.pdf)
+- Intrinsic shape signatures: A shape descriptor for 3D object recognition. ICCV'2009 [[paper]](https://www.computer.org/csdl/proceedings/iccvw/2009/4442/00/05457637.pdf)
+- Learning a Descriptor-Specific 3D Keypoint Detector. ICCV'2015 [[paper]](http://www.cv-foundation.org/openaccess/content_iccv_2015/papers/Salti_Learning_a_Descriptor-Specific_ICCV_2015_paper.pdf)
+- 3DFeat-Net: Weakly Supervised Local 3D Features for Point Cloud Registration. ECCV'2018 [[paper]](https://arxiv.org/pdf/1807.09413.pdf) [[code]](https://github.com/yewzijian/3DFeatNet)
+- USIP: Unsupervised Stable Interest Point Detection from 3D Point Clouds. ICCV'2019 [[paper]](https://openaccess.thecvf.com/content_ICCV_2019/papers/Li_USIP_Unsupervised_Stable_Interest_Point_Detection_From_3D_Point_Clouds_ICCV_2019_paper.pdf) [[code]](https://github.com/lijx10/USIP)
+- D3Feat: Joint Learning of Dense Detection and Description of 3D Local Features. CVPR'2020 [[paper]](https://arxiv.org/abs/2003.03164) [[code]](https://github.com/XuyangBai/D3Feat)
+- PointCloud Saliency Maps. ICCV'2019 [[paper]](http://arxiv.org/pdf/1812.01687) [[code]](https://github.com/tianzheng4/PointCloud-Saliency-Maps)
+- SK-Net: Deep Learning on Point Cloud via End-to-end Discovery of Spatial Keypoints. AAAI'2020 [[paper]](https://arxiv.org/pdf/2003.14014.pdf)
+- SKD: Unsupervised Keypoint Detecting for Point Clouds using Embedded Saliency Estimation. arxiv'2019 [[paper]](https://arxiv.org/pdf/1912.04943.pdf)
+- Fuzzy Logic and Histogram of Normal Orientation-based 3D Keypoint Detection For Point Clouds. PRL'2020 [[paper]](https://www.sciencedirect.com/science/article/abs/pii/S016786552030180X)
+- MaskNet: A Fully-Convolutional Network to Estimate Inlier Points. 3DV'2020 [[paper]](https://arxiv.org/abs/2010.09185) [[code]](https://github.com/vinits5/masknet)
+- PREDATOR: Registration of 3D Point Clouds with Low Overlap. arxiv'2020 [[paper]](https://arxiv.org/pdf/2011.13005.pdf) [[code]](https://github.com/ShengyuH/OverlapPredator)
+- SC3K: Self-supervised and Coherent 3D Keypoints Estimation from Rotated, Noisy, and Decimated Point Cloud Data. ICCV'2023 [[paper]](https://openaccess.thecvf.com/content/ICCV2023/papers/Zohaib_SC3K_Self-supervised_and_Coherent_3D_Keypoints_Estimation_from_Rotated_Noisy_ICCV_2023_paper.pdf) [[code]](https://github.com/IIT-PAVIS/SC3K)
+- OASIS. MQTT Version 3.1.1 Plus Errata 01. OASIS Standard, December 2015. [[docs]](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html)
+- Spin Image: Using spin images for efficient object recognition in cluttered 3D scenes. TPAMI'1999 [[paper]](https://pdfs.semanticscholar.org/30c3/e410f689516983efcd780b9bea02531c387d.pdf?_ga=2.267321353.662069860.1609508014-1451995720.1602238989)
+- USC: Unique shape context for 3D data description. 3DOR'2010 [[paper]](http://www.vision.deis.unibo.it/fede/papers/3dor10.pdf)
+- 3DShapeContext: Recognizing Objects in Range Data Using Regional Point Descriptors. ECCV'2004 [[paper]](http://www.ri.cmu.edu/pub_files/pub4/frome_andrea_2004_1/frome_andrea_2004_1.pdf)
+- SHOT: Unique Signatures of Histograms for Local Surface Description. ECCV'2010 [[paper]](http://www.researchgate.net/profile/Samuele_Salti/publication/262111100_SHOT_Unique_Signatures_of_Histograms_for_Surface_and_Texture_Description/links/541066b00cf2df04e75d5939.pdf)
+- FPFH: Fast Point Feature Histograms (FPFH) for 3D registration. ICRA'2009 [[paper]](http://www.cvl.iis.u-tokyo.ac.jp/class2016/2016w/papers/6.3DdataProcessing/Rusu_FPFH_ICRA2009.pdf)
+- RoPS: 3D Free Form Object Recognition using Rotational Projection Statistics. WACV'2013 [[paper]](http://www.researchgate.net/profile/Ferdous_Sohel/publication/236645183_3D_free_form_object_recognition_using_rotational_projection_statistics/links/0deec518a1038a2980000000.pdf)
+- CGF: Learning Compact Geometric Features. ICCV'2017 [[paper]](http://arxiv.org/pdf/1709.05056)
+- 3DMatch: Learning Local Geometric Descriptors from RGB-D Reconstructions. CVPR'2017 [[paper]](http://arxiv.org/pdf/1603.08182) [[code]](https://github.com/andyzeng/3dmatch-toolbox)
+- End-to-end learning of keypoint detector and descriptor for pose invariant 3D matching. CVPR'2018 [[paper]](http://arxiv.org/pdf/1802.07869)
+- PPFNet: Global Context Aware Local Features for Robust 3D Point Matching. CVPR'2018 [[paper]](http://arxiv.org/pdf/1802.02669)
+- 3DFeat-Net: Weakly Supervised Local 3D Features for Point Cloud Registration. ECCV'2018 [[paper]](https://arxiv.org/pdf/1807.09413.pdf) [[code]](https://github.com/yewzijian/3DFeatNet)
+- MVDesc: Learning and Matching Multi-View Descriptors for Registration of Point Clouds. ECCV'2018 [[paper]](https://arxiv.org/pdf/1807.05653.pdf) [[code]](https://github.com/zlthinker/RMBP)
+- FoldingNet: Point Cloud Auto-encoder via Deep Grid Deformation. CVPR'2018 [[paper]](http://arxiv.org/pdf/1712.07262) [[code]](https://github.com/XuyangBai/FoldingNet)
+- PPF-FoldNet: Unsupervised Learning of Rotation Invariant 3D Local Descriptors. ECCV'2018 [[paper]](https://arxiv.org/abs/1808.10322) [[code]](https://github.com/XuyangBai/PPF-FoldNet)
+- 3D Local Features for Direct Pairwise Registration. CVPR'2019 [[paper]](https://arxiv.org/abs/1904.04281)
+- 3D Point-Capsule Networks. CVPR'2019 [[paper]](https://arxiv.org/abs/1812.10775) [[code]](https://github.com/yongheng1991/3D-point-capsule-networks)
+- The Perfect Match: 3D Point Cloud Matching with Smoothed Densities. CVPR'2019 [[paper]](https://arxiv.org/abs/1811.06879) [[code]](https://github.com/zgojcic/3DSmoothNet)
+- FCGF: Fully Convolutional Geometric Features. ICCV'2019 [[paper]](https://openaccess.thecvf.com/content_ICCV_2019/papers/Choy_Fully_Convolutional_Geometric_Features_ICCV_2019_paper.pdf) [[code]](https://github.com/chrischoy/FCGF)
+- Learning an Effective Equivariant 3D Descriptor Without Supervision. ICCV'2019 [[paper]](https://arxiv.org/abs/1909.06887)
+- D3Feat: Joint Learning of Dense Detection and Description of 3D Local Features. CVPR'2020 [[paper]](https://arxiv.org/abs/2003.03164) [[code]](https://github.com/XuyangBai/D3Feat)
+- End-to-End Learning Local Multi-view Descriptors for 3D Point Clouds. CVPR'2020 [[paper]](https://arxiv.org/abs/2003.05855) [[code]](https://github.com/craigleili/3DLocalMultiViewDesc)
+- LRF-Net- Learning Local Reference Frames for 3D Local Shape Description and Matching. arxiv'2020 [[paper]](https://arxiv.org/abs/2001.07832)
+- DH3D: Deep Hierarchical 3D Descriptors for Robust Large-Scale 6DoF Relocalization. ECCV'2020 [[paper]](https://arxiv.org/pdf/2007.09217.pdf) [[code]](https://github.com/JuanDuGit/DH3D)
+- Distinctive 3D local deep descriptors. arxiv'2020 [[paper]](https://arxiv.org/abs/2009.00258) [[code]](https://github.com/fabiopoiesi/dip)
+- SpinNet: Learning a General Surface Descriptor for 3D Point Cloud Registration. CVPR'2021 [[paper]](https://arxiv.org/abs/2011.12149) [[code]](https://github.com/QingyongHu/SpinNet)
+- PREDATOR: Registration of 3D Point Clouds with Low Overlap. CVPR'2021 [[paper]](https://arxiv.org/pdf/2011.13005.pdf) [[code]](https://github.com/ShengyuH/OverlapPredator)
+- Self-supervised Geometric Perception. CVPR'2021 [[paper]](https://arxiv.org/abs/2103.03114) [[code]](https://github.com/theNded/SGP)
+- 3D Point Cloud Registration with Multi-Scale Architecture and Self-supervised Fine-tuning. arxiv'2021 [[paper]](https://arxiv.org/abs/2103.14533) [[code]](https://github.com/humanpose1/MS-SVConv)
+- Generalisable and Distinctive (GeDi) 3D local deep descriptors for point cloud registration. arxiv'2021 [[paper]](https://arxiv.org/pdf/2105.10382.pdf) [[code]](https://github.com/fabiopoiesi/gedi)
+- Neighborhood Normalization for Robust Geometric Feature Learning. CVPR'2021 [[paper]](https://openaccess.thecvf.com/content/CVPR2021/papers/Liu_Neighborhood_Normalization_for_Robust_Geometric_Feature_Learning_CVPR_2021_paper.pdf) [[code]](https://github.com/lppllppl920/NeighborhoodNormalization-Pytorch)
+- UnsupervisedR&R: Unsupervised Point Cloud Registration via Differentiable Rendering. CVPR'2021 [[paper]](https://arxiv.org/abs/2102.11870) [[code]](https://github.com/mbanani/unsupervisedRR)
+- Bootstrap Your Own Correspondences. ICCV'2021 [[paper]](https://arxiv.org/abs/2106.00677) [[code]](https://github.com/mbanani/byoc)
+- WSDesc: Weakly Supervised 3D Local Descriptor Learning for Point Cloud Registration. TVCG'2022 [[paper]](https://arxiv.org/abs/2108.02740) [[code]](https://github.com/craigleili/WSDesc)
+- You Only Hypothesize Once: Point Cloud Registration with Rotation-equivariant Descriptors. ICCV'2021 [[paper]](https://arxiv.org/abs/2109.00182) [[code]](https://github.com/HpWang-whu/YOHO)
+- P2-Net: Joint Description and Detection of Local Features for Pixel and Point Matching. ICCV'2021 [[paper]](https://openaccess.thecvf.com/content/ICCV2021/papers/Wang_P2-Net_Joint_Description_and_Detection_of_Local_Features_for_Pixel_ICCV_2021_paper.pdf)
+- Distinctiveness oriented Positional Equilibrium for Point Cloud Registration. ICCV'2021 [[paper]](https://openaccess.thecvf.com/content/ICCV2021/papers/Min_Distinctiveness_Oriented_Positional_Equilibrium_for_Point_Cloud_Registration_ICCV_2021_paper.pdf)
+- CoFiNet: Reliable Coarse-to-fine Correspondences for Robust Point Cloud Registration. NeurIPS'2021 [[paper]](https://arxiv.org/pdf/2110.14076.pdf) [[code]](https://github.com/haoyu94/Coarse-to-fine-correspondences)
+- IMFNet: Interpretable Multimodal Fusion for Point Cloud Registration. arxiv'2021 [[paper]](https://arxiv.org/pdf/2111.09624.pdf)
+- Lepard: Learning partial point cloud matching in rigid and deformable scenes. CVPR'2022 [[paper]](https://arxiv.org/abs/2111.12591) [[code]](https://github.com/rabbityl/lepard)
+- Fast and Robust Registration of Partially Overlapping Point Clouds. RA-L'2021 [[paper]](https://arxiv.org/pdf/2112.09922.pdf) [[code]](https://github.com/eduardohenriquearnold/fastreg)
+- Geometric Transformer for Fast and Robust Point Cloud Registration. CVPR'2022 [[paper]](https://arxiv.org/abs/2202.06688) [[code]](https://github.com/qinzheng93/GeoTransformer)
+- ImLoveNet: Misaligned Image-supported Registration Network for Low-overlap Point Cloud Pairs. SIGGRAPH'2022 [[paper]](https://arxiv.org/pdf/2207.00826.pdf)
+- Learning to Register Unbalanced Point Pairs. arxiv'2022 [[paper]](https://arxiv.org/abs/2207.04221)
+- OASIS. MQTT Version 5.0. OASIS Standard, March 2019. [[docs]](https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html)
+- Eclipse Foundation. Eclipse Paho MQTT Documentation. Eclipse Paho Project. [[docs]](https://www.eclipse.org/paho/)
+- HiveMQ. MQTT Essentials – A Technical Deep Dive into MQTT Protocol. HiveMQ Blog Series. [[docs]](https://www.hivemq.com/mqtt-essentials/)
+- Wireshark Foundation. Wireshark MQTT Protocol Dissector Documentation. [[article]](https://wiki.wireshark.org/MQTT)
+- Wireshark Foundation. Filtering MQTT Traffic in Wireshark – A Guide for Debugging and Performance Analysis. [[article]](https://www.wireshark.org/docs/dfref/m/mqtt.html)
+- Kerrisk, M. Linux Inter-Process Communication (IPC) Mechanisms. Linux Manual Pages, 2023. [[docs]](https://man7.org/linux/man-pages/man7/ipc.7.html)
 - Hintjens, P. ZeroMQ: Messaging for Many Applications. O’Reilly Media, 2013. ISBN: 978-1449334062.
-
-- HiveMQ. MQTT Security Fundamentals: Authentication, Encryption, and Best Practices. HiveMQ Blog, 2021. Available at: https://www.hivemq.com/mqtt-security-fundamentals/.
-
-- HiveMQ. Understanding MQTT Quality of Service (QoS) Levels 0, 1, and 2. HiveMQ Blog, 2018. Available at: https://www.hivemq.com/blog/mqtt-essentials-part-6-mqtt-quality-of-service-levels/.
-
-- Cognex Corporation. (n.d.). How Speckle-Free Lasers Improve 3D Inspections. Retrieved from https://www.cognex.com/blogs/machine-vision/how-speckle-free-lasers-improve-3d-inspections
-
-- Zhou, Q., Park, J., & Koltun, V. (2018). Open3D: A Modern Library for 3D Data Processing. Open3D Documentation. Retrieved from https://www.open3d.org/.
-
-- Cignoni, P., Callieri, M., Corsini, M., Dellepiane, M., Ganovelli, F., & Ranzuglia, G. (2008). MeshLab: an Open-Source 3D Mesh Processing System. ERCIM News, (73), 45–46. Retrieved from https://www.researchgate.net/publication/220571929_MeshLab_an_Open-Source_3D_Mesh_Processing_System.
-
-- Rusu, R. B., & Cousins, S. (2011). 3D is here: Point Cloud Library (PCL). IEEE International Conference on Robotics and Automation (ICRA), 1–4. Retrieved from https://en.wikipedia.org/wiki/Point_Cloud_Library.
-
-- Artec 3D. (2023). Artec 3D Scanning SDK Documentation. Retrieved from https://docs.artec-group.com/sdk/2.0/.
-
+- HiveMQ. MQTT Security Fundamentals: Authentication, Encryption, and Best Practices. HiveMQ Blog, 2021. [[article]](https://www.hivemq.com/mqtt-security-fundamentals/)
+- HiveMQ. Understanding MQTT Quality of Service (QoS) Levels 0, 1, and 2. HiveMQ Blog, 2018. [[article]](https://www.hivemq.com/blog/mqtt-essentials-part-6-mqtt-quality-of-service-levels/)
+- Cognex Corporation. (n.d.). How Speckle-Free Lasers Improve 3D Inspections. [[article]](https://www.cognex.com/blogs/machine-vision/how-speckle-free-lasers-improve-3d-inspections)
+- Zhou, Q., Park, J., & Koltun, V. (2018). Open3D: A Modern Library for 3D Data Processing. Open3D Documentation. [[docs]](https://www.open3d.org/)
+- Cignoni, P., Callieri, M., Corsini, M., Dellepiane, M., Ganovelli, F., & Ranzuglia, G. (2008). MeshLab: an Open-Source 3D Mesh Processing System. ERCIM News, (73), 45–46. [[paper]](https://www.researchgate.net/publication/220571929_MeshLab_an_Open-Source_3D_Mesh_Processing_System)
+- Rusu, R. B., & Cousins, S. (2011). 3D is here: Point Cloud Library (PCL). IEEE International Conference on Robotics and Automation (ICRA), 1–4. [[article]](https://en.wikipedia.org/wiki/Point_Cloud_Library)
+- Artec 3D. (2023). Artec 3D Scanning SDK Documentation. [[article]](https://docs.artec-group.com/sdk/2.0/)
 - Zhang, Y., Liu, Z., & Wang, J. (2021). 3D Mesh Processing and Character Animation. Springer International Publishing. DOI: 10.1007/978-3-030-81354-3.
-
-- Hanocka, R., Hertz, A., Fish, N., Giryes, R., Fleishman, S., & Cohen-Or, D. (2020). Mesh Convolution with Continuous Filters for 3D Surface Parsing. arXiv preprint arXiv:2112.01801. Retrieved from https://arxiv.org/abs/2112.01801.
-
-- Hu, Y., Gong, Y., Peng, S., Yang, H., & Li, Q. (2021). LaplacianNet: Learning on 3D Meshes with Laplacian Encoding and Pooling. arXiv preprint arXiv:1910.14063. Retrieved from https://arxiv.org/abs/1910.14063.
-
+- Hanocka, R., Hertz, A., Fish, N., Giryes, R., Fleishman, S., & Cohen-Or, D. (2020). Mesh Convolution with Continuous Filters for 3D Surface Parsing. arXiv preprint arXiv:2112.01801. [[paper]](https://arxiv.org/abs/2112.01801)
+- Hu, Y., Gong, Y., Peng, S., Yang, H., & Li, Q. (2021). LaplacianNet: Learning on 3D Meshes with Laplacian Encoding and Pooling. arXiv preprint arXiv:1910.14063. [[paper]](https://arxiv.org/abs/1910.14063)
 - Atkinson, J. A., & Smith, R. (2012). A Novel Mesh Processing Based Technique for 3D Plant Analysis. BMC Plant Biology, 12(1), 63. DOI: 10.1186/1471-2229-12-63.
-
 - Dziedzic, R., & D’Souza, R. M. (2020). 3D Mesh Processing Using GAMer 2 to Enable Reaction-Diffusion Simulations in Realistic Cellular Geometries. PLoS Computational Biology, 16(8), e1007756. DOI: 10.1371/journal.pcbi.1007756.
-
 - Liu, C., Ma, Y., Wei, S., & Zhou, J. (2021). 3D Mesh Pre-Processing Method Based on Feature Point Detection and Anisotropic Filtering. Remote Sensing, 13(11), 2145. DOI: 10.3390/rs13112145.
 
 
