@@ -3,11 +3,9 @@ layout: page
 title: About
 ---
 
-## About the Author
+I specialize in custom software development and creating workflow tools for content creators. I'm passionate about learning new things every day and finding optimal time-saving solutions. My personal goal is to optimize workflows and make life easier.
 
-Specialized in custom software development and creating workflow tools for content creators. I am passionate to learn new stuff every day as much as searching for optimal time-killer solutions. My personal goal is to optimize workflows and make life easier.
-
-## Author provides
+## Providing
 
 * Consulting services
 * Integration services
