@@ -591,21 +591,6 @@ This architecture ensures that the scanner operates with high efficiency, minimi
 
 Reverse engineering efforts have provided a deeper understanding of how binary executables and shared libraries interact within the EinScan HX ecosystem. The analysis focused on disassembling critical functions, identifying encrypted sections, and mapping undocumented API calls.
 
-## Key Findings
-
-1. **Obfuscated Code Sections:** The EXScan HX.exe binary contains multiple layers of encryption to obscure function calls and prevent direct code modification.
-
-2. **Function Hooks:** For example the function sub_7FF6383C21F0 is responsible for launching sn3DCommunity.exe, which orchestrates inter-process communication and data exchange.
-
-3. **Configuration Parsing:** The .server.json file stores MQTT authentication credentials, broker settings, and network endpoints, indicating potential customization opportunities.
-
-4. **Startup Parameters:** The sn3DCommunity.exe process accepts multiple command-line arguments to adjust protocol behavior:
-	* `--protoType websocket` → Enables WebSocket-based communication, `but I was unable to estabilish communication!`
-	* `--mqttAuth true` → Enforces MQTT authentication
-	* `--qtTunnelModule` passportcommunity → Configures module-level access
-
-These discoveries pave the way for custom client development, third-party software integration, and potential protocol modifications.
-
 ## Application stack overview
 
 - **scanhub.exe** -  Facilitates scanning-related services.
@@ -616,18 +601,18 @@ These discoveries pave the way for custom client development, third-party softwa
 ## Basic library overview
 
 ### Ignored libraries from the overview:
-- Win32 System Libraries https://learn.microsoft.com/en-us/windows/win32/api/
-- OSG - OpenSceneGraph https://openscenegraph.github.io/openscenegraph.io/
-- Default QT Libraries https://github.com/qt
-- Eigen Library https://gitlab.com/libeigen/eigen
+- Win32 System Libraries [[docs]](https://learn.microsoft.com/en-us/windows/win32/api/)
+- OSG - OpenSceneGraph [[link]](https://openscenegraph.github.io/openscenegraph.io/)
+- Default QT Libraries [[link]](https://github.com/qt)
+- Eigen Library [[link]](https://gitlab.com/libeigen/eigen)
 - TBB - Thread Building Blocks
-- OpenCV https://github.com/3MFConsortium/lib3mf
-- lib3mf https://github.com/3MFConsortium/lib3mf
-- libcrypto https://github.com/openssl/openssl
+- OpenCV [[link]](https://github.com/opencv/opencv)
+- lib3mf [[link]](https://github.com/3MFConsortium/lib3mf)
+- libcrypto [[link]](https://github.com/openssl/openssl)
 - libpng
 - libz
 - libpg (postrgesql)
-- OpenMesh https://www.graphics.rwth-aachen.de/software/openmesh/
+- OpenMesh [[link]](https://www.graphics.rwth-aachen.de/software/openmesh/)
 - ... and other not mentioned yet... (I am in the process of analyzing them)
 
 ### SN3DLibraries
@@ -686,6 +671,144 @@ These discoveries pave the way for custom client development, third-party softwa
 | **Sn3DTextureBasedTrack**       | Texture-based tracking and alignment.                   | - Aligning scans using **texture features instead of geometry**.<br>- Improving accuracy in **texture-rich object scanning**.<br>- Tracking movement in real-time scan sessions. |
 | **Sn3DMeshProcess**             | Advanced mesh processing functions.                    | - Refinement, noise reduction, cutting, merging.<br>- Laplacian smoothing and edge-preserving filtering. |
 | **SnSharedBlock**               | Shared memory management for 3D data structures.        | - Managing **shared blocks** for point clouds, meshes, frames, and custom data.<br>- Allocating, modifying, and retrieving memory blocks.<br>- Handling **partial data** for improved storage efficiency.<br>- Structuring **data offsets** for color, normal, and texture mapping.<br>- Supporting **multi-threaded** and **multi-session** data access. |
+
+## Insight into qttunnel.dll
+
+The qttunnel.dll library facilitates inter-process communication (IPC) through the utilization of Qt framework. This functionality is essential for accessing real-time image data from the scanner’s shared memory service, SnSyncService. The data can be retrieved via MQTT communication by subscribing to the following topic:
+
+```
+demo/ipc/map/SnSyncService/callback
+```
+
+During a forensic analysis of the library, a notable string was identified within the string table:
+
+```
+SharedMemorySegment/%1/%2
+```
+
+This string is associated with the memory location `loc_1800501EA`, suggesting a structured approach to shared memory segmentation.
+
+### Decompiled Code Analysis
+The function at `loc_1800501EA` appears to construct a shared memory key using the segment name and shared memory key. Below is a comparison between the extracted pseudocode and a more readable C++ reconstruction.
+
+#### Pseudocode Representation
+```cpp
+__int64 __fastcall QtTunnel::SegmentArgument::toString(QtTunnel::Segment **a1, __int64 a2)
+{
+  __int64 *v2; // rdi
+  __int64 i; // rcx
+  struct QtTunnel::SharedMemory *v4; // rax
+  __int64 v6; // [rsp+0h] [rbp-88h] BYREF
+  _BYTE v7[8]; // [rsp+20h] [rbp-68h] BYREF
+  _BYTE v8[8]; // [rsp+28h] [rbp-60h] BYREF
+  _BYTE v9[8]; // [rsp+30h] [rbp-58h] BYREF
+  int v10; // [rsp+38h] [rbp-50h]
+  __int64 v11; // [rsp+40h] [rbp-48h]
+  __int64 v12; // [rsp+48h] [rbp-40h]
+  __int64 v13; // [rsp+50h] [rbp-38h]
+  __int64 v14; // [rsp+58h] [rbp-30h]
+  __int64 v15; // [rsp+60h] [rbp-28h]
+  QString *v16; // [rsp+68h] [rbp-20h]
+  QString *v17; // [rsp+70h] [rbp-18h]
+
+  v2 = &v6;
+  for ( i = 32LL; i; --i )
+  {
+    *(_DWORD *)v2 = -858993460;
+    v2 = (__int64 *)((char *)v2 + 4);
+  }
+  v11 = -2LL;
+  v10 = 0;
+  v12 = QtTunnel::Segment::name(*a1, v8);
+  v13 = v12;
+  v4 = QtTunnel::Segment::sharedMemory(*a1);
+  v14 = QtTunnel::SharedMemory::key(v4, v9);
+  v15 = v14;
+  v16 = QString::QString((QString *)v7, "SharedMemorySegment/%1/%2");
+  v17 = v16;
+  QString::arg(v16, a2, v15, v13);
+  v10 |= 1u;
+  QString::~QString((QString *)v7);
+  QString::~QString((QString *)v9);
+  QString::~QString((QString *)v8);
+  return a2;
+}
+```
+
+#### Refactored Readable C++ code
+```cpp
+QString SegmentArgument::toString(Segment *segment) {
+  
+  // Simplified version
+  if (segment == nullptr || segment->sharedMemory() == nullptr) {
+    return QString();
+  }
+
+  QString name = segment->name();
+  QString key = segment->sharedMemory()->key();
+  return QString("SharedMemorySegment/%1/%2").arg(key, name);
+
+  // More explicit version
+  // if (segment == nullptr) return QString();
+  // SharedMemory *memory = segment->sharedMemory();
+  // if (memory == nullptr) return QString();
+  // QString name = segment->name();
+  // QString key = memory->get();
+  // return QString("SharedMemorySegment/%1/%2").arg(key, name);
+}
+```
+
+### Implications for Image Data Retrieval via MQTT
+This function suggests a structured naming convention for shared memory segments. If this pattern holds, it may be possible to retrieve camera image data through an MQTT callback response formatted in JSON. An example of such a response is as follows:
+
+This could potentialy meant that obtaining camera image data from MQTT callback response in JSON:
+```json
+{
+   "id":50387,
+   "params":{
+      "callbackName":"imageData",
+      "list":[
+         "Einscan3",
+         "011402D3241A00",
+         "GrayImage",
+         [
+            "InternalE3Image112393",
+            "InternalE3Image112394"
+         ],
+         {
+            "camera0":{
+               "channel":1,
+               "height":1024,
+               "sharedName":"InternalE3Image112393",
+               "size":1310720,
+               "width":1280
+            },
+            "camera1":{
+               "channel":1,
+               "height":1024,
+               "sharedName":"InternalE3Image112394",
+               "size":1310720,
+               "width":1280
+            },
+            "imageCount":2
+         }
+      ],
+      "pluginName":"3DDigitalSyncInterface",
+      "version":"2.57.1"
+   }
+}
+```
+
+Given this structured response, it is hypothesized that image data can be accessed using a constructed key, such as:
+
+```
+SharedMemorySegment/InternalE3Image112393/imageData
+```
+
+This hypothesis is currently under investigation to confirm whether the data can be directly retrieved in this manner. Further analysis and experimentation are required to validate this approach.
+
+---
+## SECTION BELOW NEEDS TO BE REWORKED
 
 ## Insight into EXScan HX.exe
 
