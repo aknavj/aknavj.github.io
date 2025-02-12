@@ -3,6 +3,7 @@
 ### Article changelog:
 
 ```
+12. Feb 2025: Overall document update. Updated section `Reverse Engineering Insights of Binary`
 11. Feb 2025: Section for `Network and Reverse Engineering Insights` is rewritten and closed due to the PoC python script.
 10. Feb 2025: Draft of IPC Communication Model is created and most of the Binary libraries are mapped.
 9. Feb 2025: Draft of the article published, written form is restructured.
@@ -27,12 +28,12 @@ https://support.einscan.com/en/support/solutions/articles/60001009796-einscan-sc
 
 | Scanner Model | Software Version | SDK URL
 | - | - | - |
-| Einstar |	EXStar_v1.0.6.0 | https://github.com/Shining3D/EXStarSDK1.6 |
-| EinScan SE/SP & SE V2/SP V2 |	EXScan S_v3.1.3.0 | https://github.com/Shining3D/SESPSDK https://github.com/Shining3D/SESPSDK-Doc https://github.com/Shining3D/SESPSDK-Demo |
-| Transcan C	| EXScan C_v1.4 | https://github.com/Shining3D/Transcan-C-SDK |
-| EinScan Pro Series | EXScan Pro_v3.5.0.9 | https://github.com/Shining3D/2X2020SDK |
-| EinScan HX |	EXScan HX_v1.0.1 | https://github.com/Shining3D/HHXSDK |
-| EinScan H/H2 |	EXScan H_v1.1 EXScan H_v1.2 | https://github.com/Shining3D/H1.2SDK |
+| Einstar |	EXStar_v1.0.6.0 | [https://github.com/Shining3D/EXStarSDK1.6](https://github.com/Shining3D/EXStarSDK1.6) |
+| EinScan SE/SP & SE V2/SP V2 |	EXScan S_v3.1.3.0 | [https://github.com/Shining3D/SESPSDK](https://github.com/Shining3D/SESPSDK) [https://github.com/Shining3D/SESPSDK-Doc](https://github.com/Shining3D/SESPSDK-Doc) [https://github.com/Shining3D/SESPSDK-Demo](https://github.com/Shining3D/SESPSDK-Demo) |
+| Transcan C	| EXScan C_v1.4 | [https://github.com/Shining3D/Transcan-C-SDK](https://github.com/Shining3D/Transcan-C-SDK) |
+| EinScan Pro Series | EXScan Pro_v3.5.0.9 | [https://github.com/Shining3D/2X2020SDK](https://github.com/Shining3D/2X2020SDK) |
+| EinScan HX |	EXScan HX_v1.0.1 | [https://github.com/Shining3D/HHXSDK](https://github.com/Shining3D/HHXSDK) |
+| EinScan H/H2 |	EXScan H_v1.1 EXScan H_v1.2 | [https://github.com/Shining3D/H1.2SDK](https://github.com/Shining3D/H1.2SDK) |
 
 Official response from Einscan support
 >Thank you for your reply. 
@@ -72,49 +73,62 @@ The overarching goal of this research is to establish a functional understanding
 
 ## Architectural Analysis of EinScan HX Software
 
-The EinScan HX scanner operates through a suite of interdependent software components that facilitate real-time communication between the scanning hardware and the host system. These components manage essential functions, including data acquisition, processing, and communication via multiple protocols.
+The EinScan HX scanner is a modular system designed for real-time data acquisition, processing, and communication. The software architecture consists of core services that communicate through Inter-Process Communication (IPC), Message Queues, Shared Memory, and MQTT-based messaging to ensure synchronized operations.
 
 ### Core Software Components
 
-The primary executable, EXScan HX.exe, acts as the central controller of the scanning process. Upon initialization, it launches several auxiliary services responsible for different aspects of the scanner’s operation. These include:
+1. **Primary Controller (EXScan HX.exe)** – Governs all software operations, initializes required services, and manages GUI interactions.
+2. Essential Background Services:
+  - **scanhub.exe** – Manages scanning workflows and task execution.
+  - **passportCommunity.exe** – Handles authentication and network verification.
+  - **scanservice.exe** – Monitors scanner status and executes scanning commands.
+  - **einscan_net_svr.exe** – Manages inter-service communication and data consistency.
 
-1. **Hardware Communication** – The software establishes connectivity with the scanner via multiple protocols, including MQTT (Message Queuing Telemetry Transport), TCP (Transmission Control Protocol), and IPC (Inter-Process Communication) through shared memory access.
-2. **Data Processing** – Raw scan data is acquired, formatted into JSON-based structures, and optimized in real time before being transmitted to the host system.
-3. **Graphical Interface Management** – The software provides a visual representation of the scan and allows user interaction for modifying scanning parameters.
+### Communication & IPC Mechanisms
 
-### Essential Background Services
-- **scanhub.exe** -  Oversees scanning-related operations and manages scanning workflows.
-- **passportCommunity.exe** - Handles authentication and network verification mechanisms.
-- **scanservice.exe** - Governs internal scanning functions and ensures device status monitoring.
-- **einscan_net_svr.exe** - Functions as a network service that manages system-wide communication between software and hardware components.
+1. ZeroMQ Messaging Layer
 
-### Communication Mechanisms
+- **Function:** Supports asynchronous, low-latency inter-process communication.
+- **Process Flow:**
+  - GUI transmits scan requests through MQTT/ZMQ.
+  - Backend processes the request and relays it to scanning services.
+  - Processed data is sent back to the GUI via Shared Memory or MQTT messaging.
 
-The EinScan HX software architecture leverages multiple communication protocols to facilitate data exchange.
+2. Shared Memory for High-Speed Data Handling
 
-- **MQTT Broker** –The message distribution system that enables lightweight, real-time data synchronization between different software modules.
-- **sn3DCommunity.exe** –  A core execution module responsible for orchestrating software-to-hardware interactions.
-- **Shared Memory Regions** – High-speed data exchange is achieved through allocated shared memory, which minimizes latency during scanning operations.
+- **Implementation:** A pre-allocated memory segment (SnSyncService_SharedMemory) stores real-time data.
+- **Synchronization:** Mutex/semaphore mechanisms prevent race conditions between concurrent processes.
+- **Use Case:** Buffers large scan frames to reduce latency and enhance processing speed.
 
-### Network and Reverse Engineering Insights
+3. Task Execution via Message Queues
 
-#### Protocol Analysis
+- **Purpose:** Ensures prioritized task execution.
+- **Process:**
+  - Critical tasks (e.g., hardware initialization) are processed first.
+  - Lower-priority tasks (e.g., UI updates) follow asynchronously.
 
-Analysis of network interactions reveals several key findings.
+4. Real-Time Sensor Data Processing via MMIO
+- Direct sensor-to-memory data transfer ensures minimal latency.
+- Interrupt-driven mechanisms allow the system to process incoming scan frames without delays.
+- Rolling buffer architecture prevents frame loss during continuous scanning operations.
 
-- **ZeroMQ Messaging Framework** – The backbone of MQTT communication, allowing low-latency, asynchronous messaging.
-- **Wireshark Traffic Analysis** – Traffic analysis demonstrates that encrypted MQTT messages govern scanner authentication, session initiation, and command execution.
-- **Message Topics** – Identified topics correspond to device metadata retrieval, execution commands, and status reporting.
+### Reverse Engineering Insights
 
-#### Reverse Engineering Discoveries
+The EinScan HX software incorporates multiple specialized libraries handling 3D processing, system communication, and hardware interaction. Key findings include:
 
-- Several binary sections within `EXScan HX.exe` contain encrypted or obfuscated code.
-- The function `sub_7FF6383C21F0` initializes sn3DCommunity.exe, establishing fundamental communication routes.
-- `.server.json` files store crucial configuration parameters, including MQTT credentials and network endpoints.
-- `sn3DCommunity.exe` supports multiple startup arguments to modify its protocol, including WebSocket and MQTT configurations.
-- Runtime modifications can be performed by manipulating the startup flags of sn3DCommunity.exe, allowing protocol reconfiguration to support WebSocket and MQTT interactions.
+- **Core 3D Processing Libraries:** Implement SLAM (Simultaneous Localization and Mapping), point cloud reconstruction, and mesh optimization.
+- **Hardware & System Management:** Uses USB communication layers, device control interfaces, and inter-process shared memory for real-time synchronization.
+- **Image & Sensor Processing:** Includes camera calibration, exposure control, and real-time image processing pipelines.
+- **Shared Memory IPC:** Facilitates high-speed inter-process data exchange, reducing latency in scan-to-processing workflows.
+- **QTtunnel:** Serves as a critical IPC framework, handling message passing and inter-module communication, essential for real-time scanner operations.
+- **Network & Security:** Implements MQTT-based command execution, authentication protocols, and ZeroMQ messaging for inter-service communication.
+  - Observed MQTT Topics for Device Control & Data Exchange:
+    - `demo/ipc/req/SnSyncService/execute` – Scanner execution request channel.
+    - `demo/ipc/rep/c5msnsync` – Response channel for scanner commands.
+    - `demo/ipc/pub/SnSyncService/message` – Scanner system messages.
+    - `demo/info/modules/SnSyncService/status` – Scanner heartbeat signals.
 
-Further research will focus on decompiling software libraries, documenting network protocol variations, reverse-engineering internal encryption mechanisms and development of tools to interface with the EinScan HX scanner efficiently.
+A detailed breakdown of individual section, libraries and their functions is provided later in the document.
 
 ## Configuration Files Referencing Important Settings
 
@@ -591,14 +605,66 @@ This architecture ensures that the scanner operates with high efficiency, minimi
 
 Reverse engineering efforts have provided a deeper understanding of how binary executables and shared libraries interact within the EinScan HX ecosystem. The analysis focused on disassembling critical functions, identifying encrypted sections, and mapping undocumented API calls.
 
-## Application stack overview
+## Application Functions Overview
 
-- **scanhub.exe** -  Facilitates scanning-related services.
-- **passportCommunity.exe** - Handles authentication and network communication.
-- **scanservice.exe** - Manages internal scanning functions.
-- **einscan_net_svr.exe** - Networking and system service handler.
+The software ecosystem comprises multiple libraries designed to facilitate high-precision 3D scanning, processing, and reconstruction. The core functionalities are categorized into several domains, including 3D algorithmic processing, system management, device communication, and user interaction.
 
-## Basic library overview
+### 1. 3D Algorithmic Processing
+
+These libraries provide advanced computational tools for point cloud registration, mesh reconstruction, segmentation, and geometric analysis.
+
+- **Sn3DAlgorithm, algorithm1, algorithm2:** Perform essential operations such as Poisson surface reconstruction, Quadric Edge Collapse Simplification (QEMS), hole filling, and mesh smoothing. GPU-accelerated versions enable real-time processing.
+- **algorithmHj, algorithmHlj:** Focus on geometric calculations, including plane fitting, hybrid registration, and projection of 3D elements.
+- **algorithmLy, algorithmLzy:** Improve surface quality through curvature-based smoothing and feature-preserving segmentation.
+- **algorithmZbt:** Specialized in structured light and pattern recognition for feature extraction and alignment.
+- **Sn3DScanSlam:** Implements Simultaneous Localization and Mapping (SLAM) techniques, optimizing real-time scan alignment and reconstruction.
+- **Sn3DMeshProcess:** Facilitates advanced mesh operations such as merging, cutting, and refinement.
+- **Sn3DDigital, Sn3DDental:** Provide domain-specific processing for dental and general-purpose scanning, incorporating registration and occlusion analysis.
+- **Sn3DCork:** Supports Boolean mesh operations, including union, difference, and intersection calculations.
+
+### 2. System and Device Management
+
+These modules ensure efficient interaction between software and hardware components, including calibration, communication, and system-wide configuration.
+
+- **libapp, DeviceControll, sdk_adapter:** Manage scanner devices, fetch hardware information, and configure settings.
+- **usbapi, UsbTreeModel, sn3DHIDCommunication:** Handle low-level USB and HID communication between the scanner and the PC.
+- **SnSharedBlock:** Provides shared memory management for handling 3D data across multiple processes.
+- **Sn3DAVXImp, Sn3DMagic:** Optimize memory allocation and performance for high-speed operations.
+- **Sn3DCalibrationJR:** Focuses on intrinsic and extrinsic camera calibration, marker detection, and optical parameter optimization.
+- **calibration_e3:** Provides additional calibration utilities for ensuring accurate measurement results.
+- **Sn3DTextureBasedTrack:** Uses texture-based features for scan alignment, improving tracking accuracy.
+
+### 3. Image and Camera Processing
+
+This category includes libraries dedicated to handling image acquisition, correction, and texture mapping.
+
+- **sn3DCamera, snCameraControl:** Provide comprehensive control over camera parameters such as exposure, white balance, and auto-settings.
+- **Sn3DColorCorrect:** Implements color correction, white balance adjustments, and non-uniformity calibration for improved image fidelity.
+- **Sn3DImageQueue:** Manages image data flow, optimizing memory and processing efficiency.
+
+### 4. Post-Processing and Data Optimization
+
+Post-processing libraries enhance scan quality by refining the data and improving accuracy.
+
+- **postprocess:** Performs noise reduction, smoothing, and feature enhancement.
+- **multi_project_process:** Enables the handling of multiple scan projects, ensuring efficient alignment and organization.
+- **Sn3DSparseSolver:** Provides optimization functions for refining sparse data sets.
+
+### 5. Communication and User Interaction
+
+These libraries ensure seamless inter-process communication, authentication, and data retrieval.
+
+- **qttunnel.3.0.9:** Handles message passing and logging within the application.
+- **libpassport:** Manages user authentication and account retrieval.
+- **information_api:** Retrieves scanner and system information, including device status and diagnostics.
+- **scan_common, SnCommon:** Provide shared utilities for alignment, file management, encryption, and configuration handling.
+- **globals, logiclayer:** Manage global settings, UI interactions, and network operations.
+
+### Conclusion
+
+The system integrates a diverse set of libraries that work cohesively to enable high-precision 3D scanning, reconstruction, and optimization. The combination of real-time processing, advanced segmentation, and efficient hardware communication ensures robust performance for various scanning applications, including industrial metrology, medical imaging, and digital content creation.
+
+## Library Overview
 
 ### Ignored libraries from the overview:
 - Win32 System Libraries [[docs]](https://learn.microsoft.com/en-us/windows/win32/api/)
@@ -609,9 +675,9 @@ Reverse engineering efforts have provided a deeper understanding of how binary e
 - OpenCV [[link]](https://github.com/opencv/opencv)
 - lib3mf [[link]](https://github.com/3MFConsortium/lib3mf)
 - libcrypto [[link]](https://github.com/openssl/openssl)
-- libpng
-- libz
-- libpg (postrgesql)
+- libpng [[link]](http://www.libpng.org/pub/png/libpng.html)
+- libz [[link]](https://www.zlib.net/)
+- libpg (postrgesql) [[link]](https://www.postgresql.org/docs/9.5/libpq.html)
 - OpenMesh [[link]](https://www.graphics.rwth-aachen.de/software/openmesh/)
 - ... and other not mentioned yet... (I am in the process of analyzing them)
 
@@ -647,15 +713,15 @@ Reverse engineering efforts have provided a deeper understanding of how binary e
 | **UsbTreeModel**                | USB device hierarchy and connection management.          | - Managing connected USB devices in a tree structure.<br>- Tracking scanner device connections and disconnections. |
 | **Sn3DAlgorithm**               | Core 3D processing algorithms and mesh operations.     | - **Poisson Reconstruction** for mesh generation.<br>- **QEM Simplification** for mesh optimization.<br>- **Hole filling and denoising**.<br>- **Cloud registration** for scan alignment.<br>- **Edge and feature extraction**. |
 | **Sn3DGPUAlgorithm**            | GPU-accelerated 3D processing functions.               | High-speed 3D operations using **parallel processing**. |
-| **SnCommon** | TODO | TODO |
+| **SnCommon**                   | Core utility library for **data conversion, encryption, file management, and configuration handling**. | - **Data transformation**: Convert between Qt types (QRect, vectors, rotation matrices) and standard formats.<br>- **String utilities**: String encoding/decoding, format conversion (UTF-8, wide string, std::string).<br>- **Cryptographic functions**: RSA encryption/decryption, base64 encoding, TEA-based encryption.<br>- **File management**: Handling file operations, directory management, JSON read/write.<br>- **Configuration management**: Loading/saving system settings, managing cache and runtime configurations.<br>- **Error logging and debugging**: Dump catcher for crash reporting. |
 | **Sn3DAVXImp** | TODO | TODO |
-| **Sn3DCalibrationJR** | TODO | TODO | 
+| **Sn3DCalibrationJR** | Camera calibration and marker-based alignment. | - **Intrinsic and extrinsic camera calibration** for accurate 3D scanning.<br>- **Marker detection and recognition** for structured scanning.<br>- **Distortion correction and rectification**.<br>- **Multi-camera calibration and stereo vision processing**.<br>- **Fundamental matrix estimation using RANSAC**.<br>- **Calibration grid processing for structured light scanning**.<br>- **Optimization of optical parameters for precise depth estimation**. |
 | **sn3DCamera**                  | Comprehensive 3D camera control and image processing.  | - Controlling camera (open, close, reset, start, stop).<br>- Adjusting exposure, gain, white balance, and auto-settings.<br>- Image processing (color modes, raw to RGB conversion, frame capture).<br>- Managing **GIGE camera configurations**.<br>- Handling **strobe and trigger** settings for precise frame capturing. |
 | **snCameraControl**             | Advanced camera control API.                            | - Adjusting **focus, exposure, white balance, and auto-gain settings**.<br>- Controlling multiple cameras in a scanning system. |
-| **Sn3DColorCorrect** | TODO | TODO |
-| **Sn3DCork** | TODO | TODO |
-| **Sn3DDental** | TODO | TODO |
-| **Sn3DDigital** | TODO | TODO |
+| **Sn3DColorCorrect** | Color correction, white balance, and non-uniformity calibration. | - **Automatic color correction and white balance adjustments**.<br>- **Color correction matrix (CCM) initialization and tuning**.<br>- **Dark current removal for improving color accuracy**.<br>- **Detection and correction of bad pixels and dust artifacts**.<br>- **Focus measurement and MTF (Modulation Transfer Function) analysis**.<br>- **Non-uniformity correction for improving image consistency**.<br>- **Color grading and gamma correction for texture enhancement**.<br>- **ROI (Region of Interest) extraction for calibration and analysis**.<br>- **GPU-accelerated color processing and optimization**.<br>- **Calculation of DeltaE values for color accuracy assessment**.<br>- **Adaptive brightness and color gain adjustments**. |
+| **Sn3DCork** | Boolean mesh operations and geometry processing. | - **Boolean operations on 3D meshes (union, difference, intersection, symmetric difference, shelling)**.<br>- **Self-intersection detection and resolution**.<br>- **Edge and face intersection testing for mesh cutting**.<br>- **Curve and cylindrical cutting for object segmentation**.<br>- **Surface reconstruction and solid verification for watertight meshes**.<br>- **Mesh gluing and repair for continuity**.<br>- **Multithreaded optimization for fast mesh operations**.<br>- **Advanced cutting techniques including freeform and plane-based cuts**. |
+| **Sn3DDental** | Specialized 3D dental scanning, registration, and occlusion analysis. | - **3D dental articulation and occlusion detection**.<br>- **Margin line detection for crowns and implants**.<br>- **Tooth segmentation and classification**.<br>- **Dental registration and implant merging**.<br>- **Wax-up processing and tooth restoration modeling**.<br>- **Mesh denoising and smoothing for high-precision dental scans**.<br>- **Multi-surface registration for complete dental arch reconstruction**.<br>- **Automatic detection of undercuts and occlusion interferences**.<br>- **Simulation of dental prosthetics fitting**.<br>- **High-precision intersection and nearest-point calculations for accurate fitting**.<br>- **Adaptive spline-based tooth contouring**.<br>- **Robust ICP-based (Iterative Closest Point) dental alignment and registration**. |
+| **Sn3DDigital** | General-purpose 3D scanning, mesh processing, and point cloud fusion. | - **Einscan post-processing for laser and speckle scanning**.<br>- **Point cloud generation and fusion for structured light scanning**.<br>- **Automatic marker-based post-processing**.<br>- **Surface meshing and reconstruction from raw scans**.<br>- **Large-scale 3D registration for body scanning**.<br>- **Poisson surface reconstruction with depth and point distance adjustments**.<br>- **Plane-based mesh cutting and refinement**.<br>- **Multigrid refinement of marching cubes for high-quality meshing**.<br>- **Advanced meshing parameters for optimized scanning workflows**.<br>- **Fusion of multiple scan sources (laser, structured light, speckle-based methods)**.<br>- **Adaptive registration methods (SIFT, large-scale point registration, ICP)**.<br>- **High-speed, memory-efficient processing for large 3D models**. |
 | **Sn3DDLPdev** | TODO | TODO |
 | **Sn3DFaceUnity** | TODO | TODO |
 | **sn3DHandiDLPDev** | TODO | TODO |
@@ -666,7 +732,7 @@ Reverse engineering efforts have provided a deeper understanding of how binary e
 | **sn3DLock** | TODO | TODO |
 | **Sn3DMagic**                   | Memory and performance optimization.                   | Allocating and optimizing memory usage for 3D processes. |
 | **Sn3DRegistration** | TODO | TODO |
-| **Sn3DScanSlam** | TODO | TODO |
+| **Sn3DScanSlam** | 3D SLAM (Simultaneous Localization and Mapping) for scanning and reconstruction. | - **Real-time point cloud fusion and optimization**.<br>- **Marker-based tracking and alignment**.<br>- **TSDF (Truncated Signed Distance Function) volumetric fusion**.<br>- **Speckle and laser-based depth reconstruction**.<br>- **Feature-based registration and pose estimation**.<br>- **Parallelized processing for high-speed 3D reconstruction**.<br>- **Scan refinement and noise reduction algorithms**. |
 | **Sn3DSparseSolver** | TODO | TODO |
 | **Sn3DTextureBasedTrack**       | Texture-based tracking and alignment.                   | - Aligning scans using **texture features instead of geometry**.<br>- Improving accuracy in **texture-rich object scanning**.<br>- Tracking movement in real-time scan sessions. |
 | **Sn3DMeshProcess**             | Advanced mesh processing functions.                    | - Refinement, noise reduction, cutting, merging.<br>- Laplacian smoothing and edge-preserving filtering. |
@@ -1020,6 +1086,3 @@ This hypothesis is currently under investigation to confirm whether the data can
 - Atkinson, J. A., & Smith, R. (2012). A Novel Mesh Processing Based Technique for 3D Plant Analysis. BMC Plant Biology, 12(1), 63. DOI: 10.1186/1471-2229-12-63.
 - Dziedzic, R., & D’Souza, R. M. (2020). 3D Mesh Processing Using GAMer 2 to Enable Reaction-Diffusion Simulations in Realistic Cellular Geometries. PLoS Computational Biology, 16(8), e1007756. DOI: 10.1371/journal.pcbi.1007756.
 - Liu, C., Ma, Y., Wei, S., & Zhou, J. (2021). 3D Mesh Pre-Processing Method Based on Feature Point Detection and Anisotropic Filtering. Remote Sensing, 13(11), 2145. DOI: 10.3390/rs13112145.
-
-
-
