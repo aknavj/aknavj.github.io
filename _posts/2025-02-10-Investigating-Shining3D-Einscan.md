@@ -3,7 +3,8 @@
 ### Article changelog:
 
 ```
-12. Feb 2025: Overall document update. Updated section `Reverse Engineering Insights of Binary`
+18. Feb 2025: Extended and restructured section `Interprocess Communication (IPC) and Shared Memory Analysis`.
+12. Feb 2025: Overall document update. Updated section `Reverse Engineering Insights of Binary`.
 11. Feb 2025: Section for `Network and Reverse Engineering Insights` is rewritten and closed due to the PoC python script.
 10. Feb 2025: Draft of IPC Communication Model is created and most of the Binary libraries are mapped.
 9. Feb 2025: Draft of the article published, written form is restructured.
@@ -22,7 +23,7 @@ In summary the following marketing claim is not very true
 
 ## Official SDK Information and Availability
 
-https://support.einscan.com/en/support/solutions/articles/60001009796-einscan-scanners-sdk
+[60001009796-einscan-scanners-sdk](https://support.einscan.com/en/support/solutions/articles/60001009796-einscan-scanners-sdk)
 
 > This is a summary table of the EinScan Scanner SDK and we will keep updating. If you need SDK, please send your account manager an email to tell him/her your github account and which scanner SDK is needed. 
 
@@ -226,14 +227,14 @@ The architecture of MQTT communication follows a well-defined message distributi
                    |
         +----------------------+----------------------+
         |                                            |
-    +--------v--------+                         +----v----+
+    +--------v--------+                         +----v-------+
     |    Publisher    |                         | Subscriber |
-    |-----------------|                         |-----------|
-    | - topic         |                         | - topic   |
+    |-----------------|                         |------------|
+    | - topic         |                         | - topic    |
     | + publish(msg)  |                         | + subscribe(topic) |
-    +---------+-------+                         +-----+-----+
+    +---------+-------+                         +-----+------+
               |                                       |
-              | Publishes messages                   | Receives messages
+              | Publishes messages                    | Receives messages
               |                                       |
          +----v--------+                       +----v--------+
          | Client      |                       | Client      |
@@ -241,7 +242,7 @@ The architecture of MQTT communication follows a well-defined message distributi
          | - clientID  |                       | - clientID  |
          | + connect() |                       | + connect() |
          | + send()    |                       | + receive() |
-         +------------+                       +-------------+
+         +------------+                        +-------------+
 ```
 
 ### Network Traffic Analysis
@@ -457,11 +458,9 @@ while True:
 
 The EinScan HX scanner employs a structured and secure network communication system that ensures reliable data transmission and command execution. Through MQTT and ZeroMQ, it achieves low-latency synchronization between the scanning software and the hardware, facilitating real-time adjustments and data retrieval.
 
-# "Theoretical Description" of the IPC (Inter-Process Communication) (For Now)
+# Interprocess Communication (IPC) and Shared Memory Analysis
 
-Inter-Process Communication (IPC) in the **EinScan HX software** enables multiple system components to exchange data efficiently while maintaining low latency and system stability. Given that the scanner operates in **real-time processing environments**, it requires a **fast, synchronized, and secure communication mechanism** between different software modules, background services, and the scanner hardware.
-
-The **IPC mechanism** in EinScan HX primarily relies on **Shared Memory** and **Message Queues**, allowing various system services `EXScan HX.exe`, `scanservice.exe`, `sn3DCommunity.exe` to communicate seamlessly.
+The EinScan HX software architecture incorporates multiple IPC mechanisms to facilitate real-time data exchange between software components. These mechanisms include **MQTT messaging**, **shared memory**, and **message queues**, ensuring low-latency communication between key processes such as `EXScan HX.exe` and `scanservice.exe`.
 
 ## **IPC Communication Model**
 
@@ -491,7 +490,7 @@ The IPC architecture of the EinScan HX scanner consists of three fundamental lay
 |                   (EXScan HX.exe)                   |
 +-----------------------------------------------------+
 |           High-Level Process Coordination           |
-|              (ZeroMQ Messaging Layer)               |
+|              (MQTT Messaging Layer)                 |
 +-----------------------------------------------------+
 |       Shared Memory & Message Queue System          |
 | (Real-time Data Exchange & Command Processing)      |
@@ -505,9 +504,9 @@ The IPC architecture of the EinScan HX scanner consists of three fundamental lay
 
 ```
 
-## High-Level Coordination: Message-Based IPC Using ZeroMQ
+## High-Level Coordination: Message-Based IPC Using MQTT
 
-At the highest level, the **EinScan HX software architecture** utilizes **ZeroMQ** for message-based IPC. ZeroMQ is an asynchronous messaging library that enables efficient communication between multiple processes while avoiding traditional bottlenecks.
+At the highest level, the **EinScan HX software architecture** utilizes **MQTT** for message-based IPC. **MQTT** is an asynchronous messaging communication model that enables efficient communication between multiple processes while avoiding traditional bottlenecks.
 
 ### Message-Based IPC Workflow
 
@@ -567,14 +566,13 @@ Shows how memory-mapped I/O (MMIO) enables direct sensor communication.
 
 ```
 
-
 This configuration dictates how the EinScan HX scanner software manages large datasets without direct network overhead.
 
-## Task Scheduling: Message Queues
+### Task Scheduling: Message Queues
 
 Since real-time scanning involves multiple concurrent operations, the software uses message queues for efficient task execution.
 
-###  Message Queue Workflow
+####  Message Queue Workflow
 
 - **Command Queuing** – Each scan request is pushed to a message queue.
 - **Prioritization** – Critical tasks (e.g., hardware initialization) have higher execution priority.
@@ -582,7 +580,7 @@ Since real-time scanning involves multiple concurrent operations, the software u
 
 Message queues allow asynchronous execution, ensuring no scanning request blocks system resources.
 
-## Real-Time Sensor Data Processing
+### Real-Time Sensor Data Processing
 
 The EinScan HX scanner utilizes memory-mapped input/output (MMIO) to interact with sensors in real time.
 
@@ -590,9 +588,84 @@ The EinScan HX scanner utilizes memory-mapped input/output (MMIO) to interact wi
 - **Interrupt-Driven Architecture** – The scanner generates hardware interrupts when a new frame of scan data is ready.
 - **Buffer Optimization** – The system uses rolling memory buffers to store multiple scan frames, reducing latency spikes.
 
+## Reverse Engineering Shared Memory Implementation
+
+Investigations into the binary files did not reveal a clear shared memory format. However, analysis using **Process Explorer** provided insights into the shared memory key structure. The software employs **[QSharedMemory](https://doc.qt.io/qt-6/qsharedmemory.html)**, utilizing the following naming convention for shared memory keys:
+
+```
+qipc_sharedmemory_<memKey><SHA-1 hash of memKey)>
+```
+
+### Identified Shared Memory Keys
+
+| User Key | Corresponding SHA-1 Hash | Note |
+| - | - | - |
+| currentMarker | 37ea5d59346733da43207baf2397a44cfec5b3cb | |
+| currentPointCloud | 58fde9da2ba9de1be89b69b23ae769577c82abe0 | |
+| wholePointCloud | 883cd8f51e21c0d19b62cb8d57ae30618dc1280d | |
+| failedPointCloud | a96e4f79c5222a77eab10b1650014a766b816fc6 | |
+| bodyScanPointCloud | f1b35be5ade24ce117b445f325642bed6e713578 |
+| frameMarkerPoint | 6c9db98621526d14ec41418c8935e26bd938e515 | | 
+| wholeMarkerPoint | 56a2c7185757fee01be5c80c77841c5dbfb1e2b3 | |
+| sceneBigData | 9941ba64efe8aa94e3f3d7207287fa02529d06f1 | |
+| sceneData (0-3) | 7227cb7903d1458fdc843efc4b41149520f458ee | Valid SHA-1 for **sceneData0** |
+| meshData (0-3) | eb345f3bc4642856f06e10ba887fc2d31169e7f1 | Valid SHA-1 for **meshData1** |
+| cam (0-3) | dd33c901d45621a073200d148e9f23320c0083b1 | Valid SHA-1 for **cam0** |
+
+The shared memory naming convention extends to identifiers, formatted as:
+
+For example:
+ - **cam0** → `qipc_sharedmemory_camdd33c901d45621a073200d148e9f23320c0083b1`
+ - **sceneData0** → `qipc_sharedmemory_sceneData7227cb7903d1458fdc843efc4b41149520f458ee`
+ - **meshData0** → `qipc_sharedmemory_meshDataeb345f3bc4642856f06e10ba887fc2d31169e7f1`
+
+## Memory Access Challenges and Protection Mechanisms
+
+Attempts to access shared memory using Python failed due to protection mechanisms in place:
+```
+[DEBUG] Trying to access shared memory: qipc_sharedmemory_camdd33c901d45621a073200d148e9f23320c0083b1
+[ERROR] Memory read failed: exception: access violation reading 0xFFFFFFFFB8A10000 at chunk offset 0
+[ERROR] Memory read failed: exception: access violation reading 0xFFFFFFFFB8CA0000 at chunk offset 1310720
+```
+
+Similarly, C-based approaches, including memory injection methods, resulted in access violations:
+```
+[DEBUG] Trying to access shared memory: qipc_sharedmemory_camdd33c901d45621a073200d148e9f23320c0083b1
+[INFO] Looking for specific memory address: FFFF858513B4D810 (Size: 3936256 bytes)
+[ERROR] VirtualQueryEx failed at: FFFF858513B4D810 (87)
+[ERROR] ReadProcessMemory failed at: FFFF858513B4D810 (998)
+```
+
+These failures suggest that `scanservice.exe` and `EXScan HX.exe` implement additional memory protection mechanisms. The only feasible approach to access this data safely requires a **low-level Windows kernel driver**.
+
+### Windows Kernel-Level Memory Access
+
+Windows protects certain memory regions by preventing direct access from user-mode applications. Analyzing the memory attributes of `QSharedMemory`, it appears to use:
+
+```
+SEC_COMMIT | SEC_NOCACHE | PAGE_READWRITE
+```
+
+To successfully read shared memory while ensuring stability, the following recommendations should be considered:
+
+1. **Handling Pageable Memory:**
+ - QSharedMemory regions may be allocated in pageable memory.
+ - Kernel-mode drivers cannot directly access pageable memory from user mode.
+2. **Safely Mapping Protected Memory:**
+ - Direct access to protected memory is blocked by Windows security mechanisms.
+3. **Process Validation Before Memory Access:**
+- If `scanservice.exe` terminates while memory is being accessed, it may lead to system instability.
+
+To access protected shared memory regions, a Windows kernel-mode driver is required. This driver should:
+1. **Dynamically identify shared memory keys** within `scanservice.exe` and `EXScan HX.exe`
+2. **Implement controlled memory mapping** using `MmMapLockedPagesSpecifyCache()`.
+3. **Ensure process stability** by checking for process termination before accessing shared memory.
+
+By following these structured development guidelines, it will be possible to retrieve real-time scan data, including point clouds, mesh structures, and live camera feeds, in a stable and efficient manner.
+ 
 ## Conclusion
 
-The IPC mechanism in the EinScan HX software is a multi-layered and highly efficient system designed for real-time, low-latency communication between software components. It integrates:
+The IPC mechanism in the `EinScan HX` software is a multi-layered and highly efficient system designed for real-time, low-latency communication between software components. It integrates:
 
 - ZeroMQ Messaging for inter-process command execution.
 - Shared Memory Buffers for high-speed data exchange.
