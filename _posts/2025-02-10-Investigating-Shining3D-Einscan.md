@@ -87,11 +87,11 @@ The EinScan HX scanner is a modular system designed for real-time data acquisiti
 
 ### Communication & IPC Mechanisms
 
-1. ZeroMQ Messaging Layer
+1. MQTT Asynchronous Messaging Communication Model Layer
 
 - **Function:** Supports asynchronous, low-latency inter-process communication.
 - **Process Flow:**
-  - GUI transmits scan requests through MQTT/ZMQ.
+  - GUI transmits scan requests through MQTT.
   - Backend processes the request and relays it to scanning services.
   - Processed data is sent back to the GUI via Shared Memory or MQTT messaging.
 
@@ -122,7 +122,7 @@ The EinScan HX software incorporates multiple specialized libraries handling 3D 
 - **Image & Sensor Processing:** Includes camera calibration, exposure control, and real-time image processing pipelines.
 - **Shared Memory IPC:** Facilitates high-speed inter-process data exchange, reducing latency in scan-to-processing workflows.
 - **QTtunnel:** Serves as a critical IPC framework, handling message passing and inter-module communication, essential for real-time scanner operations.
-- **Network & Security:** Implements MQTT-based command execution, authentication protocols, and ZeroMQ messaging for inter-service communication.
+- **Network & Security:** Implements MQTT-based command execution, authentication protocols, and messaging for inter-service communication.
   - Observed MQTT Topics for Device Control & Data Exchange:
     - `demo/ipc/req/SnSyncService/execute` – Scanner execution request channel.
     - `demo/ipc/rep/c5msnsync` – Response channel for scanner commands.
@@ -204,7 +204,7 @@ These files contain parameters for network communication, system preferences, an
 
 ## Network Communication Overview
 
-The EinScan HX scanner utilizes an advanced network communication framework, integrating MQTT (Message Queuing Telemetry Transport) and ZeroMQ messaging to ensure seamless, low-latency interactions between the scanner, the host PC, and third-party applications.
+The EinScan HX scanner utilizes an advanced network communication framework, integrating MQTT (Message Queuing Telemetry Transport) and messaging to ensure seamless, low-latency interactions between the scanner, the host PC, and third-party applications.
 
 ### MQTT Communication Workflow
 
@@ -456,7 +456,7 @@ while True:
 
 ### Conclusion
 
-The EinScan HX scanner employs a structured and secure network communication system that ensures reliable data transmission and command execution. Through MQTT and ZeroMQ, it achieves low-latency synchronization between the scanning software and the hardware, facilitating real-time adjustments and data retrieval.
+The EinScan HX scanner employs a structured and secure network communication system that ensures reliable data transmission and command execution. Through **MQTT** it achieves low-latency synchronization between the scanning software and the hardware, facilitating real-time adjustments and data retrieval.
 
 # Interprocess Communication (IPC) and Shared Memory Analysis
 
@@ -469,7 +469,7 @@ The IPC architecture of the EinScan HX scanner consists of three fundamental lay
 1 Process Coordination Layer (High-Level Control)
 - Manages the **execution order** of scanning tasks.
 - Handles **message routing and synchronization** between services.
-- Uses **ZeroMQ (ZMQ) messaging framework** for inter-service coordination.
+- Uses **MQTT asynchronous messaging communication model** for inter-service coordination.
 
 2 Data Exchange Layer (Shared Memory & Message Queues)
 - Implements **Shared Memory Buffers** for **low-latency data transfer**.
@@ -667,7 +667,7 @@ By following these structured development guidelines, it will be possible to ret
 
 The IPC mechanism in the `EinScan HX` software is a multi-layered and highly efficient system designed for real-time, low-latency communication between software components. It integrates:
 
-- ZeroMQ Messaging for inter-process command execution.
+- MQTT asynchronous messaging communication model for inter-process command execution.
 - Shared Memory Buffers for high-speed data exchange.
 - Message Queues for efficient task scheduling.
 - Memory-Mapped I/O (MMIO) for real-time sensor data streaming.
