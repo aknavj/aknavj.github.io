@@ -1,20 +1,37 @@
 # global settings
-title: "Aknavj Github"
+title: "Ondrej Vanka"
 author:
   name: Ondrej Vanka
   email: ondrej.vanka@proton.me
-description: "personal blogpost about development stuff"
+description: "graphics programmer — demoscene, reverse engineering, 3D"
+url: "https://aknavj.github.io"
+baseurl: ""
 github_username: aknavj
 
 # build settings
-remote_theme: jekyll/minima
 markdown: kramdown
 highlighter: rouge
 plugins:
   - jekyll-feed
   - jekyll-seo-tag
   - jekyll-sitemap
-  
-# orgs on front page
-featured_orgs:
-  - renderwaves
+
+# defaults
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "article"
+  - scope:
+      path: ""
+    values:
+      layout: "portfolio"
+
+# exclude build artifacts
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor
+  - node_modules
+  - README.md

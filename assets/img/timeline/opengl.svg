@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="360" viewBox="0 0 860 360">
+  <rect width="860" height="360" fill="#050510"/>
+  <rect x="1" y="1" width="858" height="358" fill="none" stroke="#00aaff" stroke-width="1" opacity="0.2"/>
+  <line x1="0" y1="180" x2="860" y2="180" stroke="#00aaff" stroke-width="0.5" opacity="0.08"/>
+  <line x1="430" y1="0" x2="430" y2="360" stroke="#00aaff" stroke-width="0.5" opacity="0.08"/>
+  <text x="430" y="170" text-anchor="middle" font-family="monospace" font-size="14" fill="#00aaff" opacity="0.6">OPENGL ENGINE</text>
+  <text x="430" y="200" text-anchor="middle" font-family="monospace" font-size="11" fill="#556677">[ REPLACE WITH IMAGE ]</text>
+</svg>
