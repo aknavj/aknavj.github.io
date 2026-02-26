@@ -1,5 +1,3 @@
 ---
-layout: home 
+layout: portfolio
 ---
-
-Welcome to my new blog!

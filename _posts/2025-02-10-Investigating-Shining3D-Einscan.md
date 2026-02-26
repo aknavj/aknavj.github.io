@@ -1,3 +1,10 @@
+---
+layout: article
+title: Investigating Shining3D Einscan
+tags: reverse-engineering shining3d einscan sdk ipc
+categories: reverse-engineering
+---
+
 > NOTE: This article is still under research, and there may be inconsistencies or incomplete/inaccurate information. Most of the work was conducted using version `EinScan HX v1.3.0.3` with the older SDK and `Shining3D/SDKDoc` as a reference point. However, recent updates have been largely based on in-depth investigation of `EinScan HX v1.4.1.2`.
 
 ### Article changelog:

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site.author.name }} — Graphics Portfolio</title>
+    <meta name="description" content="{{ site.description }}">
+    <meta name="author" content="{{ site.author.name }}">
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23050510'/><rect x='1' y='1' width='30' height='30' rx='3' fill='none' stroke='%2300aaff' stroke-width='2'/><polygon points='10,6 26,16 10,26' fill='%2300aaff'/></svg>" type="image/svg+xml">
+
+    <!-- Retro / Sci-Fi Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <!-- Portfolio CSS -->
+    <link rel="stylesheet" href="{{ '/assets/css/demoscene.css' | relative_url }}">
+
+    <!-- Critical inline CSS for loading screen -->
+    <style>
+        .loading-screen {
+            position: fixed; inset: 0; z-index: 10000;
+            background: #050510;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'VT323', monospace; color: #00ffcc;
+            transition: opacity 0.8s ease;
+        }
+        .loading-screen.fade-out { opacity: 0; pointer-events: none; }
+        .loading-content { max-width: 600px; width: 90%; }
+        .loading-content pre { font-size: 14px; line-height: 1.4; margin: 0 0 20px 0; color: #00ffcc; white-space: pre-wrap; }
+        .loading-bar-wrap { background: #0a0a20; border: 1px solid #00ffcc; height: 22px; margin: 10px 0; position: relative; }
+        .loading-bar-fill { background: #00ffcc; height: 100%; width: 0; transition: width 0.15s linear; }
+        .loading-bar-wrap::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 3px, rgba(0,0,0,0.3) 3px 4px); }
+        .loading-status { font-size: 16px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <!-- ===== LOADING SCREEN ===== -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <pre id="boot-text"></pre>
+            <div class="loading-bar-wrap">
+                <div class="loading-bar-fill" id="loading-bar"></div>
+            </div>
+            <div class="loading-status" id="loading-status">INITIALIZING...</div>
+        </div>
+    </div>
+
+    <!-- ===== WEBGL CANVAS ===== -->
+    <canvas id="demoscene-canvas"></canvas>
+
+    <!-- ===== SCANLINE OVERLAY ===== -->
+    <div class="scanlines"></div>
+
+    <!-- ===== PART INDICATOR (left sidebar) ===== -->
+    <div class="part-indicator" id="part-indicator">
+        <a href="#part-warp"     class="part-dot active" data-part="0" data-label="WARP"><span></span></a>
+        <a href="#part-render"   class="part-dot" data-part="1" data-label="RENDER"><span></span></a>
+        <a href="#part-raytrace" class="part-dot" data-part="2" data-label="TRON"><span></span></a>
+        <a href="#part-scanner"  class="part-dot" data-part="3" data-label="RAYTRACE"><span></span></a>
+        <a href="#part-signal"   class="part-dot" data-part="4" data-label="SIGNAL"><span></span></a>
+    </div>
+
+    <!-- ===== PART LABEL (effect name overlay) ===== -->
+    <div class="part-label" id="part-label">
+        <span class="part-num" id="part-num">PART 01</span>
+        <span class="part-name" id="part-name">HYPERSPACE</span>
+    </div>
+
+    <!-- ===== NAVIGATION ===== -->
+    <nav class="retro-nav" id="main-nav">
+        <div class="nav-logo"><span class="blink">▶</span> AKNAVJ://RENDER</div>
+        <div class="nav-links" id="nav-links">
+            <a href="#part-warp">INIT</a>
+            <a href="#part-render">PROFILE</a>
+            <a href="#part-raytrace">RENDER</a>
+            <a href="#part-scanner">ARCHIVES</a>
+            <a href="#part-signal">COMMS</a>
+        </div>
+        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+    </nav>
+
+    <!-- ===== MAIN CONTENT — Each section = one demo part ===== -->
+    <main class="portfolio-content" id="portfolio-content">
+
+        <!-- PART 01 — HYPERSPACE  -->
+        <section id="part-warp" class="demo-part" data-effect="hyperspace" data-part-num="01" data-part-name="HYPERSPACE">
+            <div class="part-content hero-layout">
+                <div class="part-tag">PART 01 — HYPERSPACE</div>
+                <h1 class="hero-title glitch" data-text="{{ site.author.name | upcase }}">
+                    {{ site.author.name | upcase }}
+                </h1>
+                <div class="hero-subtitle typewriter-wrap">
+                    <span class="typewriter" id="typewriter-text">CURIOUS GRAPHICS PROGRAMMER</span>
+                </div>
+                <p class="hero-tagline">Rasterization · Ray Tracing · Path Tracing · Real-time Graphics</p>
+                <div class="hero-cta">
+                    <a href="#part-render" class="retro-btn">[ ENGAGE ▼ ]</a>
+                </div>
+                <div class="scroll-hint">
+                    <span>SCROLL TO CONTINUE</span>
+                    <div class="scroll-arrow">▼</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PART 02 — RASTERIZER  -->
+        <section id="part-render" class="demo-part part-tall" data-effect="raster" data-part-num="02" data-part-name="RASTERIZER">
+            <div class="part-content">
+                <div class="part-tag">PART 02 — RASTERIZER</div>
+                <div class="floating-panel panel-glass reveal">
+                    <h2 class="panel-heading">PROFILE<span class="dot-exe">.DAT</span></h2>
+                    <p class="panel-text">
+                        I'm graphics programmer with 15+ years of professional experience. 
+                        Driven by curiosity about how real-time and offline rendering
+                        work under the hood — the math, the algorithms, and the engineering that
+                        brings pixels to life.
+                    </p>
+                </div>
+
+                <!-- TIMELINE  -->
+                <div class="timeline reveal">
+                    <div class="timeline-line"></div>
+
+                    <!-- ▸ MILESTONE 01 -->
+                    <div class="tl-item tl-left">
+                        <div class="tl-dot"><span>01</span></div>
+                        <div class="tl-card panel-glass">
+                            <div class="tl-gallery">
+                                <span class="tl-counter">1 / 4</span>
+                                <div class="tl-gallery-track">
+                                    <div class="tl-slide">
+                                        <img src="{{ '/assets/img/timeline/radiant-01.svg' | relative_url }}" alt="GTK Radiant map editing" class="tl-img" loading="lazy">
+                                        <span class="tl-caption">GTK RADIANT — QUAKE 3 MAP</span>
+                                    </div>
+                                    <div class="tl-slide">
+                                        <img src="{{ '/assets/img/timeline/radiant-02.svg' | relative_url }}" alt="Jedi Academy level" class="tl-img" loading="lazy">
+                                        <span class="tl-caption">JEDI ACADEMY — CUSTOM LEVEL</span>
+                                    </div>
+                                    <div class="tl-slide">
+                                        <img src="{{ '/assets/img/timeline/dedit-01.svg' | relative_url }}" alt="DEdit AVP2" class="tl-img" loading="lazy">
+                                        <span class="tl-caption">DEDIT — AVP2 LITHTECH</span>
+                                    </div>
+                                    <div class="tl-slide">
+                                        <img src="{{ '/assets/img/timeline/starcraft-01.svg' | relative_url }}" alt="StarCraft editor" class="tl-img" loading="lazy">
+                                        <span class="tl-caption">STARCRAFT — SCENARIO EDITOR</span>
+                                    </div>
+                                </div>
+                                <div class="tl-dots">
+                                    <button class="tl-dot-btn active" data-slide="0" aria-label="Slide 1"></button>
+                                    <button class="tl-dot-btn" data-slide="1" aria-label="Slide 2"></button>
+                                    <button class="tl-dot-btn" data-slide="2" aria-label="Slide 3"></button>
+                                    <button class="tl-dot-btn" data-slide="3" aria-label="Slide 4"></button>
+                                </div>
+                            </div>
+                            <div class="tl-body">
+                                <span class="tl-year">~ 2003</span>
+                                <h3 class="tl-title">MAP EDITORS &amp; MODDING</h3>
+                                <p class="tl-text">
+                                    It started with StarCraft editor —
+                                    building custom maps, and continued GTK Radiant for Jedi Academy, LITECH D-Edit map making for AVP2.
+                                    These tools revealed how game worlds are assembled and sparked the obsession of creating something similar
+                                    on my own in the future. And that's how it all began.
+                                </p>
+                                <div class="tl-tags">
+                                    <span class="influence-tag">STARCRAFT EDITOR</span>
+                                    <span class="influence-tag">GTK RADIANT</span>
+                                    <span class="influence-tag">LITECH DEDIT</span>
+                                    <span class="influence-tag">MILKSHAPE 3D</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ▸ MILESTONE 02 -->
+                    <div class="tl-item tl-right">
+                        <div class="tl-dot"><span>02</span></div>
+                        <div class="tl-card panel-glass">
+                            <div class="tl-gallery tl-gallery--single">
+                                <div class="tl-gallery-track">
+                                    <div class="tl-slide">
+                                        <img src="{{ '/assets/img/timeline/cinema4d.svg' | relative_url }}" alt="Cinema 4D" class="tl-img" loading="lazy">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tl-body">
+                                <span class="tl-year">~ 2004</span>
+                                <h3 class="tl-title">CINEMA 4D &amp; FIRST CODE</h3>
+                                <p class="tl-text">
+                                    Moved from level editing and game modding into Cinema 4D for 3D modeling &amp;
+                                    rendering. The desire to understand what happens behind the viewport led to 
+                                    writing my first C/C++ programs and exploring game SDK's. Also I was pretty
+                                    obcessed by Doom 3 and StarCraft Ghost around that time. Which motivated me
+                                    even more!
+                                </p>
+                                <div class="tl-tags">
+                                    <span class="influence-tag">CINEMA 4D CE6 - R19</span>
+                                    <span class="influence-tag">C / C++</span>
+                                    <span class="influence-tag">Doom 3</span>
+                                    <span class="influence-tag">StarCraft Ghost</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ▸ MILESTONE 03 -->
+                    <div class="tl-item tl-left">
+                        <div class="tl-dot"><span>03</span></div>
+                        <div class="tl-card panel-glass">
+                            <div class="tl-gallery tl-gallery--single">
+                                <div class="tl-gallery-track">
+                                    <div class="tl-slide">
+                                        <img src="{{ '/assets/img/timeline/opengl.svg' | relative_url }}" alt="OpenGL engine" class="tl-img" loading="lazy">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tl-body">
+                                <span class="tl-year">~ 2007</span>
+                                <h3 class="tl-title">OPENGL → FIRST & SECOND 3D ENGINE</h3>
+                                <p class="tl-text">
+                                    Built dozens of OpenGL samples according early NeHe tutorials
+                                    that gradually merged into a primitive game engine — renderer.
+                                    The point of no return into graphics programming. 
+                                    
+                                    Also I realized that I have no interest in gameplay code. So I 
+                                    focused all my efforts on the engine architecture and graphics 
+                                    side of things and never looked back since then.
+                                </p>
+                                <div class="tl-tags">
+                                    <span class="influence-tag">OPENGL</span>
+                                    <span class="influence-tag">NEHE</span>
+                                    <span class="influence-tag">BSP</span>
+                                    <span class="influence-tag">GLSL</span>
+                                    <span class="influence-tag">C++</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ▸ MILESTONE 04 ★ HIGHLIGHT -->
+                    <div class="tl-item tl-right tl-highlight">
+                        <div class="tl-dot"><span>04</span></div>
+                        <div class="tl-card panel-glass">
+                            <div class="tl-gallery tl-gallery--single">
+                                <div class="tl-gallery-track">
+                                    <div class="tl-slide">
+                                        <img src="{{ '/assets/img/timeline/engine.svg' | relative_url }}" alt="Engine work" class="tl-img" loading="lazy">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tl-body">
+                                <span class="tl-badge">PASSION</span>
+                                <span class="tl-year">2010 - 2025</span>
+                                <h3 class="tl-title">PROFESSIONAL ENGINE DEV</h3>
+                                <p class="tl-text">
+                                    Turned the hobby into a career — engine architecture, render
+                                    back-ends, shader pipelines, tool chains. Over 15 years of
+                                    shipping real-time graphics at production scale.
+                                </p>
+                                <div class="tl-tags">
+                                    <span class="influence-tag">ENGINE ARCH</span>
+                                    <span class="influence-tag">RENDER R&amp;D</span>
+                                    <span class="influence-tag">15+ YEARS</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ▸ MILESTONE 05 ★ HIGHLIGHT -->
+                    <div class="tl-item tl-left tl-highlight">
+                        <div class="tl-dot"><span>05</span></div>
+                        <div class="tl-card panel-glass">
+                            <div class="tl-gallery tl-gallery--single">
+                                <div class="tl-gallery-track">
+                                    <div class="tl-slide">
+                                        <img src="{{ '/assets/img/timeline/compute.svg' | relative_url }}" alt="GPU compute" class="tl-img" loading="lazy">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tl-body">
+                                <span class="tl-badge">ACTIVE</span>
+                                <span class="tl-year">2025 - NOW</span>
+                                <h3 class="tl-title">GPU ACCELERATORS</h3>
+                                <p class="tl-text">
+                                    Currently exploring GPU accelerators, NPUs, and the low-level
+                                    stack for ML / LLM / AI — where decades of graphics hardware
+                                    knowledge meets the next wave of computing.
+                                </p>
+                                <div class="tl-tags">
+                                    <span class="influence-tag">CUDA</span>
+                                    <span class="influence-tag">NPU</span>
+                                    <span class="influence-tag">ML/AI</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /.timeline -->
+            </div>
+        </section>
+
+        <!-- PART 03 — TRON  -->
+        <section id="part-raytrace" class="demo-part part-tall" data-effect="tron" data-part-num="03" data-part-name="TRON">
+            <div class="part-content">
+                <div class="part-tag">PART 03 — TRON</div>
+                <h2 class="section-heading copper-text">PROJECTS<span class="dot-exe">.GIT</span></h2>
+
+                <div class="floating-panel panel-glass reveal">
+                    <div class="repo-list">
+                        <a href="https://github.com/aknavj/dhewm3-cupt" target="_blank" rel="noopener" class="repo-row">
+                            <span class="repo-icon">◎</span>
+                            <div class="repo-info">
+                                <h3 class="repo-name">DHEWM3-CUPT</h3>
+                                <p class="repo-desc">CUDA path-tracing renderer bolted onto the Doom 3 engine (dhewm3 fork). Real-time GI experiments on id Tech 4.</p>
+                            </div>
+                            <div class="repo-meta">
+                                <span class="influence-tag">C++</span>
+                                <span class="influence-tag">CUDA</span>
+                                <span class="influence-tag">OPENGL</span>
+                            </div>
+                        </a>
+                        <a href="https://github.com/renderwaves/ld49" target="_blank" rel="noopener" class="repo-row">
+                            <span class="repo-icon">▣</span>
+                            <div class="repo-info">
+                                <h3 class="repo-name">LUDUM DARE 49</h3>
+                                <p class="repo-desc">Game jam entry — 48h prototype built from scratch with the renderwaves team.</p>
+                            </div>
+                            <div class="repo-meta">
+                                <span class="influence-tag">JAVA</span>
+                                <span class="influence-tag">GAME JAM</span>
+                            </div>
+                        </a>
+                        <a href="https://github.com/aknavj/cinema4d-scripts" target="_blank" rel="noopener" class="repo-row">
+                            <span class="repo-icon">◆</span>
+                            <div class="repo-info">
+                                <h3 class="repo-name">CINEMA 4D SCRIPTS</h3>
+                                <p class="repo-desc">Utility scripts &amp; scene setups for Cinema 4D — Python, Xpresso, Coffee Script tooling.</p>
+                            </div>
+                            <div class="repo-meta">
+                                <span class="influence-tag">C++</span>
+                                <span class="influence-tag">PYTHON</span>
+                                <span class="influence-tag">XPRESSO</span>
+                            </div>
+                        </a>
+                        <a href="https://github.com/aknavj/cinema4d-portfolio" target="_blank" rel="noopener" class="repo-row">
+                            <span class="repo-icon">✦</span>
+                            <div class="repo-info">
+                                <h3 class="repo-name">3D PORTFOLIO</h3>
+                                <p class="repo-desc">Cinema 4D scenes created between 2007–2016. Personal 3D artwork and rendering experiments.</p>
+                            </div>
+                            <div class="repo-meta">
+                                <span class="influence-tag">CINEMA 4D</span>
+                                <span class="influence-tag">3D ART</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="floating-panel panel-glass reveal">
+                    <div class="api-tags">
+                        <span class="influence-tag">OPENGL</span>
+                        <span class="influence-tag">VULKAN</span>
+                        <span class="influence-tag">DIRECT3D 11/12</span>
+                        <span class="influence-tag">METAL</span>
+                        <span class="influence-tag">WEBGL / WEBGPU</span>
+                        <span class="influence-tag">CUDA</span>
+                        <span class="influence-tag">OPENCL</span>
+                        <span class="influence-tag">GLSL / HLSL / SPIRV</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PART 04 — RAYTRACER  -->
+        <section id="part-scanner" class="demo-part" data-effect="raytrace" data-part-num="04" data-part-name="RAYTRACER">
+            <div class="part-content">
+                <div class="part-tag">PART 04 — RAYTRACER</div>
+                <div class="floating-panel panel-glass reveal">
+                    <h2 class="panel-heading">ARCHIVES<span class="dot-exe">.LOG</span></h2>
+                    {% for post in site.posts limit:10 %}
+                    <a href="{{ post.url | relative_url }}" class="blog-entry">
+                        <span class="blog-date">{{ post.date | date: "%Y-%m-%d" }}</span>
+                        <span class="blog-icon">▸</span>
+                        <span class="blog-title">{{ post.title | upcase }}</span>
+                        {% if post.categories.size > 0 %}
+                        <span class="blog-cat">[{{ post.categories | join: "/" }}]</span>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                    {% if site.posts.size == 0 %}
+                    <p class="panel-text">$ No entries found in database.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- PART 05 — SIGNAL  -->
+        <section id="part-signal" class="demo-part" data-effect="signal" data-part-num="05" data-part-name="SIGNAL">
+            <div class="part-content">
+                <div class="part-tag">PART 05 — SIGNAL</div>
+                <div class="floating-panel panel-glass reveal">
+                    <h2 class="panel-heading">COMMS<span class="dot-exe">.LINK</span></h2>
+                    <div class="terminal-block">
+                        <div class="term-line"><span class="prompt">$</span> cat channels.txt</div>
+                        <div class="contact-links">
+                            <a href="https://www.linkedin.com/in/ondrejvanka/" target="_blank" rel="noopener" class="contact-link">
+                                <span class="link-arrow">►</span> LINKEDIN
+                            </a>
+                            <a href="https://x.com/aknavj" target="_blank" rel="noopener" class="contact-link">
+                                <span class="link-arrow">►</span> X / TWITTER
+                            </a>
+                            <a href="https://github.com/{{ site.github_username }}" target="_blank" rel="noopener" class="contact-link">
+                                <span class="link-arrow">►</span> PERSONAL GITHUB
+                            </a>
+                            <a href="https://github.com/gfxdevdot" target="_blank" rel="noopener" class="contact-link">
+                                <span class="link-arrow">►</span> GFXDEVDOT GITHUB
+                            </a>
+                        </div>
+                        <div class="term-line"><span class="prompt">$</span> cat signal.txt</div>
+                        <div class="contact-links">
+                            <a href="mailto:{{ site.author.email }}" class="contact-link">
+                                <span class="link-arrow">►</span> {{ site.author.email | upcase }}
+                            </a>
+                        </div>
+                        <div class="term-line"><span class="prompt">$</span> cat organisations.txt</div>
+                        <div class="contact-links">
+                            <a href="https://www.gfxdev.org/" target="_blank" rel="noopener" class="contact-link">
+                                <span class="link-arrow">►</span> gfxdev.org
+                            </a>
+                            <a href="https://www.renderwaves.com" target="_blank" rel="noopener" class="contact-link">
+                                <span class="link-arrow">►</span> renderwaves.com
+                            </a>
+                        </div>
+                        <div class="term-line"><span class="prompt">$</span> <span class="cursor-blink"> _</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="retro-footer">
+        <p>&copy; {{ site.time | date: '%Y' }} {{ site.author.name }} — CODED WITH ♥ AND RENDER PASSES</p>
+    </footer>
+
+    <!-- ===== DEMOSCENE ENGINE ===== -->
+    <script src="{{ '/assets/js/demoscene.js' | relative_url }}"></script>
+
+    <!-- ===== TIMELINE GALLERY ===== -->
+    <script>
+    (function(){
+        document.querySelectorAll('.tl-gallery').forEach(function(gal){
+            var track = gal.querySelector('.tl-gallery-track');
+            var slides = gal.querySelectorAll('.tl-slide');
+            var dots = gal.querySelectorAll('.tl-dot-btn');
+            var counter = gal.querySelector('.tl-counter');
+            if(!track || slides.length < 2) return;
+
+            /* dot click → scroll to slide */
+            dots.forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    var i = parseInt(btn.getAttribute('data-slide'), 10);
+                    slides[i].scrollIntoView({behavior:'smooth', block:'nearest', inline:'start'});
+                });
+            });
+
+            /* scroll → update dots + counter */
+            var update = function(){
+                var sl = track.scrollLeft;
+                var w = slides[0].offsetWidth;
+                var idx = Math.round(sl / w);
+                dots.forEach(function(d,i){ d.classList.toggle('active', i===idx); });
+                if(counter) counter.textContent = (idx+1) + ' / ' + slides.length;
+            };
+            track.addEventListener('scroll', update, {passive:true});
+        });
+    })();
+    </script>
+
+    <!-- ===== IMAGE LIGHTBOX ===== -->
+    <div class="lightbox-overlay" id="lightbox">
+        <button class="lightbox-close" aria-label="Close">[ ESC ]</button>
+        <img id="lightbox-img" src="" alt="">
+        <div class="lightbox-caption" id="lightbox-cap"></div>
+    </div>
+    <script>
+    (function(){
+        var lb   = document.getElementById('lightbox');
+        var lbI  = document.getElementById('lightbox-img');
+        var lbC  = document.getElementById('lightbox-cap');
+        var cls  = lb.querySelector('.lightbox-close');
+
+        function open(src, caption){
+            lbI.src = src;
+            lbC.textContent = caption || '';
+            lbC.style.display = caption ? '' : 'none';
+            lb.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function close(){
+            lb.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        /* click any timeline image → open lightbox */
+        document.querySelectorAll('.tl-img').forEach(function(img){
+            img.addEventListener('click', function(e){
+                e.stopPropagation();
+                var slide = img.closest('.tl-slide');
+                var cap = slide ? slide.querySelector('.tl-caption') : null;
+                open(img.src, cap ? cap.textContent : '');
+            });
+        });
+
+        /* close on overlay click, button, or Escape */
+        lb.addEventListener('click', close);
+        cls.addEventListener('click', close);
+        lbI.addEventListener('click', function(e){ e.stopPropagation(); close(); });
+        document.addEventListener('keydown', function(e){
+            if(e.key === 'Escape') close();
+        });
+    })();
+    </script>
+</body>
+</html>
