@@ -25,7 +25,7 @@ What followed is one of the most documented development disasters in gaming hist
 - **2006** — Indefinitely postponed. Xbox 360 and PS3 are arriving. Ghost targets Xbox, PS2, and GameCube — already obsolete hardware.
 - **2014** — Mike Morhaime quietly uses the word "cancelled."
 
-In February 2020, a functional build from Nihilistic's era leaked online: an original Xbox prototype with a PC debug executable (`Star_d.exe`), working levels, models, and character data — debug symbols still partially intact. Being a development build, all assets sit unpacked as loose files on disk rather than bundled into `.nob` archives. Every model, texture, map, and template file is immediately browsable without writing an unpacker first.
+In February 2020, a build from Nihilistic's era leaked online: a functional Xbox prototype and a broken PC debug executable (`Star_d.exe`), with working levels, models, and character data — debug symbols still partially intact. Being a development build, all assets sit unpacked as loose files on disk rather than bundled into `.nob` archives. Every model, texture, map, and template file is immediately browsable without writing an unpacker first.
 
 The leak only covers the Xbox and D3D8 codebase. PS2 and GameCube ports were reportedly in development, and it would be fascinating to see how those were implemented — radically different hardware, likely a fair amount of duplicated effort solving the same problems on each platform. But for now, Xbox is what we have.
 
@@ -37,7 +37,7 @@ I started **Starev** — my reverse engineering effort on the NOD engine, curren
 
 The NOD engine was built between 1998 and 2000 for a PC RPG, then carried into 2001–2004 for a multi-platform console action game it was never designed for. The codebase reflects that journey: heavy C foundations with C++ appearing mid-stream as the team experimented during development. If you've read through the [Rebellion AVP source code](https://github.com/aknavj/avp), you'll recognize the pattern — raw, low-level, functional, with object-oriented structures surfacing in unexpected places.
 
-Nihilistic rose from legends who brought us *Dark Forces*. That pedigree is impressive — but I think it also became their Achilles' heel. They didn't start on a greenfield. They carried their existing engine forward, and that decision cost the project dearly.
+Nihilistic rose from legends who brought us *Dark Forces*. That legacy is impressive — but I think it also became their Achilles' heel. They didn't start on a greenfield. They carried their existing engine forward, and that decision cost the project dearly.
 
 Back in 2004, like many StarCraft fans, I was thrilled when the E3 trailer dropped — excited enough to start saving for a PS2 just to play it. All my early 3D graphics experiments from that point were aimed at trying to recreate the Ghost universe. I just wanted to play the thing so badly. You can imagine how I felt diving into the Xbox leak almost 16 years later, armed with actual experience in the field — a far cry from the 13-year-old me who could only watch trailers and dream.
 
