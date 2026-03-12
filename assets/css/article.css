@@ -258,9 +258,10 @@ a:hover { color: var(--primary); text-shadow: 0 0 8px var(--primary); }
     background: rgba(0, 10, 20, 0.8);
     border: 1px solid rgba(0, 170, 255, 0.15);
     overflow-x: auto;
+    white-space: pre;
     font-family: var(--font-mono);
     font-size: 15px;
-    line-height: 1.65;
+    line-height: 1.35;
     color: var(--accent);
     position: relative;
 }
