@@ -275,7 +275,7 @@ I went with Cook-Torrance and GGX — the same shading model that Unreal Engine 
 
 **Fresnel** uses the Schlick approximation: $F = F_0 + (1 - F_0)(1 - \cos\theta)^5$. The diffuse component is energy-conserving Lambertian: $k_d = (1 - F)(1 - \text{metallic})$, scaled by $\frac{\text{albedo}}{\pi}$. Metals get no diffuse contribution — all their color comes through specular reflection.
 
-I spent a frustrating week wondering why every metal surface looked dead before I found it: *Doom 3*'s original renderer doubles the specular contribution in its interaction shaders. `result = diffuse + specular * 2`. Every surface in the game was tuned under that assumption. Without the boost, the path-traced scene looked physically correct and emotionally flat. `r_cuSpecularBoost` (default 2.0×) fixes it — matching Carmack's artists rather than the textbook.
+I spent a frustrating week wondering why every metal surface looked dead before I found it: *Doom 3*'s original renderer doubles the specular contribution in its interaction shaders. `result = diffuse + specular * 2`. Every surface in the game was tuned under that assumption. Without the boost, the path-traced scene looked physically correct and emotionally flat. `r_cuSpecularBoost` (default 2.0×) fixes it — matching Doom 3's artists rather than the textbook.
 
 ---
 
@@ -351,7 +351,7 @@ The biggest embarrassment is `glDrawPixels`. Every frame copies the entire pixel
 
 Building a path tracer inside a shipping engine — even one from 2004 — is a fundamentally different problem than building one from scratch. You don't get to define the scene format. You don't get to choose how materials work. You get `drawSurf_t` arrays and `idMaterial` pointers and you make them work.
 
-The hardest part wasn't the BVH, or the kernel architecture, or even wiring CUDA into CMake. It was getting the *feel* right. *Doom 3* has a specific look — heavy specular on metal, pitch-black shadows with sharp falloff, warm orange light pooling on concrete. The algorithms are in every textbook. But a physically correct renderer doesn't automatically reproduce what Carmack's artists intended. I kept producing frames that were technically right and emotionally dead. Matching artistic intent matters more than matching the equations.
+The hardest part wasn't the BVH, or the kernel architecture, or even wiring CUDA into CMake. It was getting the *feel* right. *Doom 3* has a specific look — heavy specular on metal, pitch-black shadows with sharp falloff, warm orange light pooling on concrete. The algorithms are in every textbook. But a physically correct renderer doesn't automatically reproduce what id Software's artists intended. I kept producing frames that were technically right and emotionally dead. Matching artistic intent matters more than matching the equations.
 
 idTech 4's material system is more complex than it looks. A single material can have dozens of shader stages with animated registers, conditional expressions, and blend operations that interact in ways the documentation doesn't cover. Mapping that down to a flat PBR struct means making judgment calls about what to keep and what to lose. I got many of those calls wrong before I got them right.
 
