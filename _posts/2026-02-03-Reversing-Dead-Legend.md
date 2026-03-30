@@ -15,7 +15,7 @@ StarCraft: Ghost was announced on September 19, 2002 — a third-person stealth-
 
 The game was pitched to Blizzard by **Nihilistic Software**, a studio founded in 1998 by Ray Gresko, Robert Huebner, and Steve Tietze — LucasArts veterans who had shipped *Star Wars Jedi Knight: Dark Forces II*. Their first title as Nihilistic was *Vampire: The Masquerade — Redemption* (2000), built on a proprietary engine called **NOD**. When the Ghost contract came in, they brought that engine along.
 
-What followed is one of the most documented development disasters in gaming history. [Polygon's exposé](http://www.polygon.com/2016/7/5/11819438/starcraft-ghost-what-went-wrong) and Jason Schreier's *Play Nice* cover it thoroughly. The short version:
+What followed has been well-documented. [Polygon's exposé](http://www.polygon.com/2016/7/5/11819438/starcraft-ghost-what-went-wrong) and Jason Schreier's *Play Nice* cover it in detail. The short version:
 
 - **2001** — Development begins. Monthly cheques from Blizzard, no fixed deadline.
 - **2002** — Playable build at Tokyo Game Show. Blizzard keeps adding features. Splinter Cell ships and suddenly every feedback session mirrors it.
@@ -25,7 +25,7 @@ What followed is one of the most documented development disasters in gaming hist
 - **2006** — Indefinitely postponed. Xbox 360 and PS3 are arriving. Ghost targets Xbox, PS2, and GameCube — already obsolete hardware.
 - **2014** — Mike Morhaime quietly uses the word "cancelled."
 
-In February 2020, a build from Nihilistic's era leaked online: a functional Xbox prototype and a broken PC debug executable (`Star_d.exe`), with working levels, models, and character data — debug symbols still partially intact. Being a development build, all assets sit unpacked as loose files on disk rather than bundled into `.nob` archives. Every model, texture, map, and template file is immediately browsable without writing an unpacker first.
+In February 2020, a build from Nihilistic's era leaked online: a functional Xbox prototype and a broken PC debug executable (`Star_d.exe`), with working levels, models, and character data — debug symbols still partially intact. Since it's a development build, all the assets sit unpacked as loose files on disk rather than bundled into `.nob` archives. Every model, texture, map, and template file is right there — no unpacker needed.
 
 The leak only covers the Xbox and D3D8 codebase. PS2 and GameCube ports were reportedly in development, and it would be fascinating to see how those were implemented — radically different hardware, likely a fair amount of duplicated effort solving the same problems on each platform. But for now, Xbox is what we have.
 
@@ -37,7 +37,7 @@ I started **Starev** — my reverse engineering effort on the NOD engine, curren
 
 The NOD engine was built between 1998 and 2000 for a PC RPG, then carried into 2001–2004 for a multi-platform console action game it was never designed for. The codebase reflects that journey: heavy C foundations with C++ appearing mid-stream as the team experimented during development. If you've read through the [Rebellion AVP source code](https://github.com/aknavj/avp), you'll recognize the pattern — raw, low-level, functional, with object-oriented structures surfacing in unexpected places.
 
-Nihilistic rose from legends who brought us *Dark Forces*. That legacy is impressive — but I think it also became their Achilles' heel. They didn't start on a greenfield. They carried their existing engine forward, and that decision cost the project dearly.
+Nihilistic's founders shipped *Dark Forces*. That pedigree is impressive — but I think it also became their Achilles' heel. They didn't start on a greenfield. They carried their existing engine forward, and that decision cost the project dearly.
 
 Back in 2004, like many StarCraft fans, I was thrilled when the E3 trailer dropped — excited enough to start saving for a PS2 just to play it. All my early 3D graphics experiments from that point were aimed at trying to recreate the Ghost universe. I just wanted to play the thing so badly. You can imagine how I felt diving into the Xbox leak almost 16 years later, armed with actual experience in the field — a far cry from the 13-year-old me who could only watch trailers and dream.
 
@@ -78,7 +78,7 @@ Debug strings throughout the binary reveal the original source tree at `C:\star\
 +------------------------------------------------------------+
 ```
 
-The same patterns recur at every layer: `stdHashtable` for resource lookup, reference counting with free lists, and bundled archives (`.nmb`, `.nnb`, `.nsb`) for level-atomic asset streaming. The config parser still reads `masquerade.ini` — a filename inherited directly from *Vampire: The Masquerade — Redemption*. Nobody renamed it. The vampire's config file lives inside the NOD's StarCraft Ghost engine.
+The same patterns show up everywhere: `stdHashtable` for resource lookup, reference counting with free lists, and bundled archives (`.nmb`, `.nnb`, `.nsb`) for level-atomic asset streaming. The config parser still reads `masquerade.ini` — a filename inherited directly from *Vampire: The Masquerade — Redemption*. Nobody renamed it. The vampire's config file lives inside the NOD's StarCraft Ghost engine.
 
 On paper, a textbook architecture. In practice, the details tell a different story.
 
@@ -90,7 +90,7 @@ I'll save the subsystem-by-subsystem breakdown for a follow-up article. At the a
 
 **The renderer is competent.** A D3D8 backend with a 44-type shader factory, 42 vertex shaders at 4 LODs each, 12 pixel shaders, and a material system that ties rendering to audio — a shader defines what a surface *looks like* and what it *sounds like* when you walk on it. For 2001, solid work.
 
-**`tWorld` is sector-based.** The world is divided into sectors, each carrying its own geometry, portal links to neighbors, and surface groups tied to shaders. Sectors are the spatial unit: streaming, visibility, and collision all operate at sector granularity. It's a classic portal-based partition, not unlike Quake's BSP leaves, but with Nihilistic's own level format and tooling behind it.
+The world is sector-based. Each sector carries its own geometry, portal links to neighbors, and surface groups tied to shaders. Streaming, visibility, and collision all operate at sector granularity — a classic portal-based partition, not unlike Quake's BSP leaves, but with Nihilistic's own level format and tooling behind it.
 
 **Everything is a `tThing`.** The central entity type carries a GUID, transform, sector link, and physics interactions. Objects, actors, props, projectiles all inherit from it. AI classes attach to a `tThing` to define behavior — movement, awareness, reactions — while `tThing` itself handles the physics side: collision responses, Havok integration, spatial queries. Each `tThing` lives inside a sector, and `tWorld` owns the relationship between the two.
 
@@ -100,7 +100,7 @@ Three full factions, boss fights, vehicle systems — all for a stealth-action g
 
 **Scripting is compiled C++.** `cGameScript` is a standalone gameplay system that defines behavior and events for maps and entities, with 20 domain-specific binding modules. It works — but it's compiled code. No Lua, no bytecode, no hot-reloading. Every gameplay tweak means a recompile. When your publisher is constantly requesting changes, that iteration cost compounds.
 
-**No integration with Blizzard's pipeline.** The engine uses proprietary Nihilistic formats (`.nod`, `.nad`, `.nsd`, `.ntb`...) instead of Blizzard's `.mpq`-based toolchain. Every asset flowed through Nihilistic's own pipeline, completely disconnected from Blizzard's workflows.
+There's also zero integration with Blizzard's pipeline. The engine uses proprietary Nihilistic formats (`.nod`, `.nad`, `.nsd`, `.ntb`...) instead of Blizzard's `.mpq`-based toolchain. Every asset flowed through Nihilistic's own tools, completely disconnected from Blizzard's workflows.
 
 ---
 
@@ -110,19 +110,19 @@ When Ghost was indefinitely postponed in 2006 — and silently cancelled in 2014
 
 The rendering backend is hard-wired to D3D8. The platform layer is a source fork, not a clean abstraction. The physics middleware is a dead version of Havok. A next-gen port wouldn't be a port — it would be a rewrite.
 
-No individual system is terrible. Many parts are competently engineered. But the whole doesn't cohere into the game it's supposed to be. An engine built for a PC RPG was asked to run a multi-platform console action game with three factions, vehicles, stealth, multiplayer, and six camera modes. The foundation never matched the ambition.
+Taken alone, most of these systems are solid work. But they don't add up. An engine built for a PC RPG was carrying a multi-platform console action game with three factions, vehicles, stealth, multiplayer, and six camera modes. The foundation was never going to hold all of that.
 
 ---
 
 ## What I Took Away
 
-Carry-forward engines are a gamble. Reusing VtMR's codebase saved months upfront, then cost years as every original design assumption became a constraint on the new project.
+Reusing VtMR's codebase saved Nihilistic months upfront — then cost them years as every design assumption from the RPG became a constraint on the action game. Carry-forward engines are a gamble, and this one didn't pay off.
 
-Scope without focus kills. The sheer number of AI types, control modes, effect systems, and platform targets is impressive on paper — and impossible to ship when the team can't agree on what the game *is*.
+The sheer number of AI types, control modes, effect systems, and platform targets is impressive on paper. It's also impossible to ship when nobody can agree on what the game actually *is*.
 
-Outsourced development compounds every problem. Incompatible asset pipelines, compiled-only scripting, no shared tools. Every iteration loop carries friction that an in-house team never faces.
+Outsourced development made all of it worse. Incompatible asset pipelines, compiled-only scripting, no shared tools — every iteration loop carried friction that an in-house team would never face.
 
-None of this is meant to disparage the developers. I admire them. The NOD engine is a time capsule of how games were built when C++ was still new, when 64MB of RAM was generous, and when a 44-type shader system on D3D8 was cutting edge. The people who built engines like this are the reason we have the tools and techniques we use today.
+None of this is a knock on the developers — I genuinely admire them. The NOD engine is a time capsule of how games were built when C++ was still new, when 64MB of RAM was generous, and when a 44-type shader system on D3D8 was cutting edge. The people who built engines like this are the reason we have the tools and techniques we use today.
 
 That's why I reverse engineer dead games. Not to judge, but to learn — and to make sure the knowledge doesn't disappear.
 
