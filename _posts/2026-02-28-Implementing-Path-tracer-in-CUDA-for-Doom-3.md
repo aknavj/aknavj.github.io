@@ -9,17 +9,13 @@ categories: graphics
 
 ---
 
-## Why *Doom 3*?
+## Introduction
 
-I first played *Doom 3* on an AMD Duron 700 MHz with 768 MB of RAM and a Radeon 9250 — hardware I still have in the closet. It wasn't smooth. Didn't matter. The per-pixel lighting, the dynamic shadows, the way a single flashlight beam could make a hallway feel like a place — that was enough to rewire what I wanted to do with my life.
+This article presents the design and implementation of a GPU-accelerated path tracer integrated into **id Software**'s *Doom 3* engine via the [dhewm3](https://dhewm3.org/) source port. The renderer intercepts dhewm3's draw call pipeline at the backend level, extracts scene geometry and lighting data, constructs a bounding volume hierarchy on the GPU, and evaluates physically based light transport — all within the constraints of a twenty-year-old game engine that was never designed for it.
 
-Instead of excelling in school, I was crying through the night trying to get OpenGL, GLSL, and rendering right for my very early primitive game engines — cobbled together from whatever source I could find. NeHe tutorials, gamedev.net forums, GPL'd idTech projects and SDKs. I read through *Mathematics for Game Developers*, *Game Engine Architecture*, *Game Programming Gems*, *Core Techniques and Algorithms in Game Programming* — anything that might explain why my renderer and game engine architecture wasn't quite there.
+The motivation is personal. I first played *Doom 3* on an AMD Duron 700 MHz with a Radeon 9250 — hardware I still have in the closet. The per-pixel lighting, the dynamic shadows, the way a single flashlight beam could make a hallway feel like a place — that rewired what I wanted to do with my life. By 2008 I was building primitive engines around the *Doom 3* SDK. A year later I hacked together a spherical path tracer following [smallpt](http://www.kevinbeason.com/smallpt/) and [tokaspt](https://github.com/JarkkoPFC/tokaspt). The code was ugly. It rendered something. That was enough.
 
-Around 2008, I was on my third attempt at a game engine and built it heavily around the *Doom 3* SDK. It wasn't much — normal and specular mapping from TGA textures was there, BSP loading worked, OBJ/LWO/MD5mesh static models were supported — but shadows were vague at best. Still, I was happy I'd made something *similar* with very limited knowledge. A year later I hacked together a primitive spherical path tracer, following [smallpt](http://www.kevinbeason.com/smallpt/) and [tokaspt](https://github.com/JarkkoPFC/tokaspt) as examples to learn from. The code was ugly. It rendered something. That was enough.
-
-I always wanted to put a path tracer inside a real game engine — not a toy scene, not a Cornell box, but something people actually played. When I finally had the time to do it, combining the engine I grew up studying with the rendering technique I'd been circling for years felt inevitable. Projects like [Q2VKPT](https://github.com/cschied/q2vkpt) proved it could work. I just went for it.
-
-The engine itself made the decision easy. The full source is GPL'd, the architecture is clean, and dhewm3 has kept it building on modern systems ever since. Every light is an explicit source with position, color, radius, and projection parameters. No baked lightmaps. No ambiguity. The scene data is right there in the draw call pipeline, waiting to be intercepted.
+The goal was always to combine these two threads — the engine I grew up studying and the rendering technique I'd been circling for years. Projects like Schied's [Q2VKPT](https://github.com/cschied/q2vkpt) (2019) demonstrated that real-time path tracing inside a classic id engine was feasible. *Doom 3*'s GPL'd source, explicit lighting model — every light is a placed entity with position, color, radius, and projection parameters, no baked lightmaps — and dhewm3's modern build system made it the ideal target.
 
 The approach: intercept the geometry and lights dhewm3 submits each frame, upload everything to CUDA, build a BVH, path trace the scene, and blit the result back through OpenGL. No engine rewrite. No new asset pipeline. Just a `renderer_cuda/` directory sitting next to the existing `renderer/` and a CMake flag to enable it.
 
@@ -27,9 +23,11 @@ The approach: intercept the geometry and lights dhewm3 submits each frame, uploa
 
 ---
 
-## The Pipeline
+## System Architecture
 
-The trick is to sit exactly where the GL rasterizer sits. dhewm3's backend calls `RB_DrawView()` once per frame to draw everything — I replaced that call with `RB_CUDA_DrawView()` and intercepted the entire pipeline. Here's what happens every frame:
+The renderer operates by replacing the GL rasterization backend with a CUDA path tracing pipeline. dhewm3's backend calls `RB_DrawView()` once per frame to rasterize all visible geometry. The implementation substitutes this with `RB_CUDA_DrawView()`, which intercepts the same data structures and redirects them through six sequential stages. Figure 1 illustrates the control flow.
+
+**Figure 1.** Frame-level control flow — original GL rasterizer (left) and CUDA path tracer replacement (right).
 
 ```
  DOOM 3 FRAME                              CUDA PATH TRACER
@@ -81,58 +79,102 @@ The trick is to sit exactly where the GL rasterizer sits. dhewm3's backend calls
                                       [screen]
 ```
 
-**1. Scene extraction.** I walk `backEnd.viewDef->drawSurfs` — the same list the GL renderer would consume — and copy vertex positions, normals, tangents, UVs, and indices into flat arrays. Entity transforms get baked into world space on the CPU. Materials come from idTech 4's `idMaterial` shader stages, flattened into a `cudaMaterial_t` struct. Lights come from `backEnd.viewDef->viewLights`, with point, directional, and projected types all mapped to a unified `cudaLight_t`.
+**Stage 1 — Scene extraction.** The implementation walks `backEnd.viewDef->drawSurfs` — the same list the GL renderer would consume — and copies vertex positions, normals, tangents, UVs, and indices into flat arrays. Entity transforms are baked into world space on the CPU. Materials are sourced from idTech 4's `idMaterial` shader stages and flattened into a `cudaMaterial_t` struct. Lights are extracted from `backEnd.viewDef->viewLights`, with point, directional, and projected types mapped to a unified `cudaLight_t`.
 
-**2. GPU upload.** Everything gets `cudaMemcpy`'d to device memory. Materials and textures are pointer-cached across frames so only new ones get uploaded. Lights are rebuilt every frame since they animate.
+**Stage 2 — GPU upload.** All scene data is transferred to device memory via `cudaMemcpy`. Materials and textures are pointer-cached across frames; only new entries are uploaded. Lights are rebuilt every frame to account for animation.
 
-**3. BVH construction.** A Linear BVH is built entirely on the GPU using the Karras (2012) algorithm — four custom kernels plus a Thrust radix sort. More on this below.
+**Stage 3 — BVH construction.** A Linear BVH is built entirely on the GPU using the Karras (2012) algorithm — four custom kernels plus a Thrust radix sort. This is detailed in the Acceleration Structure section.
 
-**4. Path tracing.** One thread per pixel, launched in 16×16 tiles. Each thread fires a primary ray with sub-pixel jitter, traverses the BVH, evaluates materials, samples direct lighting, and optionally bounces for indirect illumination. Results accumulate into a float4 HDR framebuffer.
+**Stage 4 — Path tracing.** One thread per pixel, launched in 16×16 tiles. Each thread fires a primary ray with sub-pixel jitter, traverses the BVH, evaluates materials, samples direct lighting, and optionally bounces for indirect illumination. Results accumulate into a `float4` HDR framebuffer. Listing 1 shows the core of the per-pixel kernel — primary ray generation through the bounce loop.
 
-**5. Tone mapping.** A second kernel converts HDR to LDR — Reinhard, ACES, or Uncharted 2, selectable at runtime — plus gamma correction.
+**Listing 1.** Per-pixel path tracing with sub-pixel jitter and iterative bounce evaluation.
 
-**6. Blit.** The final pixels get copied back to host memory and drawn with `glDrawPixels`. No GL-CUDA interop, no shared PBO — just a raw pixel copy. Not elegant. Works everywhere.
+```cuda
+// per-pixel RNG seeded from pixel position + frame index
+unsigned long long pixelSeed =
+    (unsigned long long)(y * width + x) * 1000003ULL
+    + (unsigned long long)frameIndex * 999983ULL;
+curandState randState;
+curand_init(pixelSeed, 0, 0, &randState);
 
----
+for (int sample = 0; sample < samplesPerPixel; sample++) {
+    // primary ray with sub-pixel jitter
+    float jitterX = curand_uniform(&randState) - 0.5f;
+    float jitterY = curand_uniform(&randState) - 0.5f;
+    float u = ((float)(x) + 0.5f + jitterX) / (float)width  * 2.0f - 1.0f;
+    float v = ((float)(y) + 0.5f + jitterY) / (float)height * 2.0f - 1.0f;
 
-## Frame Breakdown
+    cudaRay_t ray;
+    ray.origin    = cameraPos;
+    ray.direction = normalize(cameraForward
+                   + u * cameraRight * tanHalfFovX
+                   + v * cameraUp    * tanHalfFovY);
 
-The renderer has eight selectable modes (`r_cuMode`), each showing a different stage of the pipeline. Here's what the same frame looks like across them:
+    float pathThroughput[3] = { 1, 1, 1 };
+    float pathRadiance[3]   = { 0, 0, 0 };
+
+    for (int iteration = 0; iteration < maxPasses && depth < maxDepth;
+         iteration++) {
+        cudaHitInfo_t hitInfo;
+        if (!IntersectBVH(ray, vertices, triangles, bvhNodes,
+                          triIndices, materials, hitInfo)) {
+            // sky or miss — accumulate and break
+            break;
+        }
+        // evaluate material, sample direct light, bounce...
+    }
+}
+```
+
+The outer `sample` loop executes the configured samples-per-pixel count. The inner `iteration` loop handles bounces and transparent passes — alpha-tested surfaces, decals, and glass do not increment the bounce depth, allowing a ray to pass through many transparent layers before consuming a bounce.
+
+**Stage 5 — Tone mapping.** A post-processing kernel converts HDR to LDR using one of three selectable operators — Reinhard, ACES, or Uncharted 2 — followed by gamma correction.
+
+**Stage 6 — Blit.** The final pixel buffer is copied back to host memory and drawn with `glDrawPixels`. No GL-CUDA interop is used. This is the simplest possible output path — not the fastest.
+
+The renderer exposes eight selectable visualization modes via the `r_cuMode` CVar, each isolating a different pipeline stage. Figures 2 through 7 show the same frame rendered across these modes.
 
 ![r_cuMode 1 — BVH debug: ray cast with random per-triangle coloring](/assets/img/posts/d3pt_bhvdebug.png)
-**`r_cuMode 1` — BVH debug: ray cast with random per-triangle coloring**
+**Figure 2.** `r_cuMode 1` — BVH traversal debug visualization with random per-triangle coloring.
 
-![r_cuMode 4 — Albedo texture](/assets/img/posts/d3pt_albedo.png) **`r_cuMode 4` — Albedo texture**
+![r_cuMode 4 — Albedo texture](/assets/img/posts/d3pt_albedo.png)
+**Figure 3.** `r_cuMode 4` — Albedo texture output.
 
-![r_cuMode 5 — Normal map visualization](/assets/img/posts/d3pt_normal.png) **`r_cuMode 5` — Normal map visualization**
+![r_cuMode 5 — Normal map visualization](/assets/img/posts/d3pt_normal.png)
+**Figure 4.** `r_cuMode 5` — Normal map visualization.
 
-![r_cuMode 6 — Specular map visualization](/assets/img/posts/d3pt_specular.png) **`r_cuMode 6` — Specular map visualization**
+![r_cuMode 6 — Specular map visualization](/assets/img/posts/d3pt_specular.png)
+**Figure 5.** `r_cuMode 6` — Specular map visualization.
 
-![r_cuMode 7 — Whitted ray tracing: direct lighting, Blinn-Phong specular, mirror reflections](/assets/img/posts/d3pt_raytraced.png) **`r_cuMode 7` — Whitted ray tracing: direct lighting, Blinn-Phong specular, mirror reflections**
+![r_cuMode 7 — Whitted ray tracing: direct lighting, Blinn-Phong specular, mirror reflections](/assets/img/posts/d3pt_raytraced.png)
+**Figure 6.** `r_cuMode 7` — Whitted-style ray tracing with direct lighting, Blinn-Phong specular, and mirror reflections.
 
-![r_cuMode 0 — Full PBR path tracing (converged, ~32 frames accumulated)](/assets/img/posts/d3pt_pathtraced.png) **`r_cuMode 0` — Full PBR path tracing (converged, ~32 frames accumulated)**
+![r_cuMode 0 — Full PBR path tracing (converged, ~32 frames accumulated)](/assets/img/posts/d3pt_pathtraced.png)
+**Figure 7.** `r_cuMode 0` — Full PBR path tracing, converged at approximately 32 accumulated frames.
 
 ---
 
-## The BVH
+## Acceleration Structure
 
-This is where I spent the most debugging time. *Doom 3* levels can push hundreds of thousands of triangles, and the BVH needs to be rebuilt every frame because entities move. A CPU build was out of the question — too slow by an order of magnitude.
+*Doom 3* levels can push hundreds of thousands of triangles, and the BVH must be rebuilt every frame because entities move. A CPU build was out of the question — too slow by an order of magnitude. This section describes the GPU-parallel LBVH construction and the traversal algorithm used at render time.
 
-I went with an LBVH — Linear Bounding Volume Hierarchy — following Karras's 2012 paper on parallel construction. The idea is beautiful on paper and miserable to debug on a GPU. The build breaks down into four custom kernels plus a Thrust sort:
+The construction follows Karras's 2012 paper on maximizing parallelism in BVH construction. The build decomposes into five phases, each implemented as a separate CUDA kernel (with the exception of the sort, which delegates to Thrust).
 
-**Morton codes.** Each triangle's centroid is normalized to [0,1] within the scene AABB and encoded into a 30-bit Morton code (10 bits per axis, interleaved with `expandBits`). This maps 3D proximity to 1D sort order along a space-filling Z-curve.
+**Phase 1 — Morton code computation.** Each triangle's centroid is normalized to $[0, 1]$ within the scene's axis-aligned bounding box and encoded into a 30-bit Morton code — 10 bits per axis, interleaved via `expandBits`. This maps three-dimensional spatial proximity to a one-dimensional sort key along a space-filling Z-curve.
 
-**Radix sort.** Thrust's `sort_by_key` sorts the Morton codes and their triangle indices in parallel. This is the most expensive step and the one that forces a host sync — the stream must drain before Thrust takes over the default stream. It's also the most heavily optimized, since Thrust's radix sort is a production-grade GPU primitive.
+**Phase 2 — Radix sort.** Thrust's `sort_by_key` sorts the Morton codes and their associated triangle indices in parallel. This is the most computationally expensive phase and the one that forces a host synchronization — the CUDA stream must drain before Thrust takes over the default stream. Thrust's radix sort is a production-grade GPU primitive; attempting to replace it with a custom implementation would be counterproductive.
 
-**Radix tree.** An internal node kernel determines the split position for each node using the delta function — `__clz` on XOR'd Morton codes, with index-based tiebreaking for duplicates. Each internal node gets left and right children, and parent pointers are stored for the bottom-up pass.
+**Phase 3 — Radix tree construction.** An internal node kernel determines the split position for each node using the delta function — `__clz` applied to XOR'd Morton codes, with index-based tiebreaking for duplicates. Each internal node receives left and right child pointers. Parent pointers are stored for the subsequent bottom-up pass.
 
-**Leaf initialization.** A separate kernel writes leaf nodes with per-triangle bounding boxes (epsilon-padded to avoid grazing-ray misses).
+**Phase 4 — Leaf initialization.** A separate kernel writes leaf nodes containing per-triangle bounding boxes, epsilon-padded to prevent grazing-ray intersection misses.
 
-**Bottom-up propagation.** Starting from every leaf, each thread walks up the parent chain. An atomic counter per internal node ensures the second child to arrive computes the union AABB while the first one exits. This guarantees every internal node is visited exactly once.
+**Phase 5 — Bottom-up AABB propagation.** Starting from every leaf, each thread walks up the parent chain. An atomic counter per internal node ensures that the second child to arrive computes the union AABB while the first child exits immediately. This guarantees that every internal node is visited exactly once.
 
-The custom kernels run on a dedicated CUDA stream, but Thrust's `sort_by_key` forces a stream synchronization and runs on the default stream. I tried everything to avoid that stall — it's the one unavoidable host-side sync in the entire build pipeline. You just eat it.
+The custom kernels execute on a dedicated CUDA stream. Thrust's `sort_by_key`, however, forces a stream synchronization and executes on the default stream. Every reasonable alternative was attempted. This remains the one unavoidable host-side stall in the entire build pipeline.
 
-The traversal itself is a stack-based walk with front-to-back ordering. Each thread maintains a 128-entry local stack and pushes the nearer child last so it gets popped first:
+**Traversal.** At render time, each thread performs a stack-based BVH walk with front-to-back child ordering. The thread maintains a 128-entry local stack and pushes the nearer child last so it is popped first. Listing 2 shows the traversal loop.
+
+**Listing 2.** Stack-based BVH traversal with front-to-back ordering.
 
 ```cuda
 int stack[128];
@@ -182,188 +224,141 @@ while (stackPtr > 0 && stackPtr < 128) {
 }
 ```
 
-The front-to-back ordering means early hits tighten `tmax` quickly, pruning large branches of the tree before any intersection test runs. For *Doom 3*'s indoor environments — lots of occluding walls — this cuts traversal cost roughly in half compared to arbitrary child ordering.
+The front-to-back ordering causes early intersections to tighten `tmax` rapidly, pruning large subtrees before any triangle test executes. For *Doom 3*'s indoor environments — dense with occluding walls — this reduces traversal cost by roughly half compared to arbitrary child ordering.
 
 ---
 
-## Materials
+## Material Conversion
 
-This was the part I underestimated the most. *Doom 3*'s material system isn't a simple texture-per-surface setup — it's a multi-stage shader pipeline. A single material can have bump, diffuse, specular, and ambient interaction stages, blend modes, alpha tests, vertex colors, and animated texture registers. My path tracer needs something much simpler: an albedo, a normal, roughness, metallic, and a few flags. Bridging that gap is where most of the ugly judgment calls live.
+The material system proved to be the most underestimated component. *Doom 3*'s `idMaterial` is not a simple texture-per-surface mapping — it is a multi-stage shader pipeline. A single material can declare bump, diffuse, specular, and ambient interaction stages, blend modes, alpha tests, vertex colors, and animated texture registers. The path tracer requires a substantially simpler representation: albedo, normal, roughness, metallic, and a set of behavioral flags. Bridging this gap required a conversion layer that walks each material's shader stages and extracts what it can.
 
-The converter walks each `idMaterial`'s shader stages and extracts what it can.
+**Diffuse stages** provide the albedo texture and base color tint — one texture, one color multiplier. This is the straightforward case.
 
-**Diffuse stages** provide the albedo texture and base color tint. This is the straightforward case — one texture, one color multiplier.
+**Bump stages** provide normal maps. *Doom 3* uses the RXGB encoding — the X component occupies the alpha channel, Y green, Z blue. The kernel reconstructs tangent-space normals accordingly. When the tangent frame is degenerate, the kernel fabricates an orthonormal basis from the geometric surface normal.
 
-**Bump stages** provide normal maps. *Doom 3* uses the RXGB format — the X component lives in the alpha channel, Y in green, Z in blue. The kernel reconstructs tangent-space normals accordingly and handles degenerate tangent frames by fabricating an orthonormal basis from the surface normal.
+**Specular stages** provide a specular intensity map. Roughness and metallic values are derived heuristically from specular luminance — higher luminance yields lower roughness and higher metallic weight. A PBR artist would find this objectionable. It maps the visual weight correctly for the majority of *Doom 3*'s surfaces, and that is what matters for faithful reproduction.
 
-**Specular stages** provide a specular map. I derive roughness and metallic from specular luminance — brighter specular means smoother and more metallic. It's a heuristic. A real PBR artist would hate it. But it gets the visual weight right for most of *Doom 3*'s surfaces, and that's what matters.
+**Coverage type** determines alpha test thresholds for perforated materials (grates, fences) and blend modes for translucent glass and additive particles.
 
-**Coverage type** determines alpha test thresholds for perforated materials like grates, and blend modes for translucent glass and additive particles.
+**Emission** is inferred from materials with no interaction stages. Ambient-only materials — light panels, screens, HUD elements — become emissive surfaces in the path tracer.
 
-**Emission** comes from materials with no interaction stages — ambient-only materials like light panels and screens become emissive surfaces in the path tracer.
+**Vertex colors** pass through for particles and decals that modulate per-vertex.
 
-**Vertex colors** pass through for particles and decals that modulate per-vertex. **Texture transforms** — scale, rotation, scroll — are extracted from shader registers and applied in the kernel's UV computation.
+**Texture transforms** — scale, rotation, scroll — are extracted from shader registers and applied during the kernel's UV computation.
 
-Materials are pointer-cached with an `idHashIndex` keyed on the `idMaterial` pointer. A material is converted once and reused across frames until a texture overflow forces a full flush.
-
----
-
-## Lighting
-
-idTech 4 has three light types — point, parallel (directional), and projected (spotlight with a texture frustum). I extract all three from the engine's `viewLight_t` list each frame.
-
-**Point lights** use *Doom 3*'s axis-aligned light radius as the falloff boundary. The attenuation follows a windowed quadratic: $(1 - (d/r)^2)^2$, which gives a smooth falloff to zero at the radius boundary — no hard cutoff, no inverse-square singularity.
-
-**Projected lights** are the ones I found most interesting — and the trickiest to get right. Each carries four frustum planes (`lightProject[4]`) that define a textured light volume. The path tracer evaluates these planes to compute UV coordinates within the projection, samples the light texture there, and applies a falloff gradient along the frustum depth. Cone angle and edge softness are derived from the frustum geometry. Getting this wrong makes every spotlight in the game look like a featureless white cone. I got it wrong many times.
-
-**Direct light sampling** casts shadow rays from each hit point toward up to `r_cuMaxLightSamples` randomly selected lights, weighted by `numLights / numSamples` to keep the estimator unbiased. The shadow test is transparency-aware — it walks through alpha-tested, transmissive, and blended surfaces, attenuating the shadow ray per-material rather than treating every intersection as fully opaque. This gives you correct shadows through chain-link fences, tinted glass, and particle effects.
-
-**Soft shadows** come from jittering the light sample position within the light's volume. Point lights jitter within their `lightRadius3` extents; spotlights jitter along their right and up axes. The scale is controllable via `r_cuSoftShadowScale`.
-
-**Indirect lighting** is a single-bounce GI pass — the feature that made the whole project worth doing, honestly. At the primary hit point, a cosine-weighted hemisphere sample is fired. The indirect ray walks through transparent surfaces (up to four steps) until it finds something opaque, evaluates direct lighting there with a shadow ray, and returns the result as incident radiance. It fires at a configurable probability (`r_cuIndirectProb`) — typically not every pixel — and it fills in the ambient that makes *Doom 3*'s pitch-black corridors feel like physical spaces instead of floating geometry. The first time I saw light bleeding around a door frame that the original renderer left pitch black, I knew the architecture was right.
-
-The core of the path tracing kernel — primary ray generation through the bounce loop — looks like this:
-
-```cuda
-// per-pixel RNG seeded from pixel position + frame index
-unsigned long long pixelSeed =
-    (unsigned long long)(y * width + x) * 1000003ULL
-    + (unsigned long long)frameIndex * 999983ULL;
-curandState randState;
-curand_init(pixelSeed, 0, 0, &randState);
-
-for (int sample = 0; sample < samplesPerPixel; sample++) {
-    // primary ray with sub-pixel jitter
-    float jitterX = curand_uniform(&randState) - 0.5f;
-    float jitterY = curand_uniform(&randState) - 0.5f;
-    float u = ((float)(x) + 0.5f + jitterX) / (float)width  * 2.0f - 1.0f;
-    float v = ((float)(y) + 0.5f + jitterY) / (float)height * 2.0f - 1.0f;
-
-    cudaRay_t ray;
-    ray.origin    = cameraPos;
-    ray.direction = normalize(cameraForward
-                   + u * cameraRight * tanHalfFovX
-                   + v * cameraUp    * tanHalfFovY);
-
-    float pathThroughput[3] = { 1, 1, 1 };
-    float pathRadiance[3]   = { 0, 0, 0 };
-
-    for (int iteration = 0; iteration < maxPasses && depth < maxDepth;
-         iteration++) {
-        cudaHitInfo_t hitInfo;
-        if (!IntersectBVH(ray, vertices, triangles, bvhNodes,
-                          triIndices, materials, hitInfo)) {
-            // sky or miss — accumulate and break
-            break;
-        }
-        // evaluate material, sample direct light, bounce...
-    }
-}
-```
-
-The outer `sample` loop runs the configured SPP count. The inner `iteration` loop handles bounces and transparent passes — alpha-tested surfaces, decals, and glass don't increment the bounce depth, so a ray can pass through many transparent layers before counting as a real bounce.
+Materials are pointer-cached using an `idHashIndex` keyed on the `idMaterial` pointer. A material is converted once and reused across frames until a texture overflow forces a full cache flush.
 
 ---
 
-## The BRDF
+## Light Evaluation
 
-I went with Cook-Torrance and GGX — the same shading model that Unreal Engine 4 and most modern PBR pipelines use. Nothing exotic. It handles rough diffuse and sharp metallic reflections in one framework, and there's plenty of reference material when something looks wrong at 2 AM.
+idTech 4 defines three light types: point, parallel (directional), and projected (spotlight with a texture frustum). All three are extracted from the engine's `viewLight_t` list each frame and evaluated during path tracing.
 
-**The normal distribution** uses GGX (Trowbridge-Reitz): $D = \frac{\alpha^2}{\pi((\mathbf{n} \cdot \mathbf{h})^2(\alpha^2 - 1) + 1)^2}$. GGX has heavier tails than Blinn-Phong, which means broader specular highlights at grazing angles — exactly what you need for the wet-looking metal floors in *Doom 3*'s Mars base.
+**Point lights.** Attenuation follows a windowed quadratic function using *Doom 3*'s axis-aligned light radius as the falloff boundary:
 
-**The geometry term** uses Smith's method with Schlick-GGX approximation: $G = G_1(\mathbf{n} \cdot \mathbf{v}) \cdot G_1(\mathbf{n} \cdot \mathbf{l})$. This accounts for microfacet self-shadowing and masking — the reason rough surfaces lose energy at steep viewing angles instead of blowing out.
+$$A(d) = \left(1 - \left(\frac{d}{r}\right)^2\right)^2 \tag{1}$$
 
-**Fresnel** uses the Schlick approximation: $F = F_0 + (1 - F_0)(1 - \cos\theta)^5$. The diffuse component is energy-conserving Lambertian: $k_d = (1 - F)(1 - \text{metallic})$, scaled by $\frac{\text{albedo}}{\pi}$. Metals get no diffuse contribution — all their color comes through specular reflection.
+This provides a smooth falloff to zero at the radius boundary — no hard cutoff, no inverse-square singularity at $d = 0$.
 
-I spent a frustrating week wondering why every metal surface looked dead before I found it: *Doom 3*'s original renderer doubles the specular contribution in its interaction shaders. `result = diffuse + specular * 2`. Every surface in the game was tuned under that assumption. Without the boost, the path-traced scene looked physically correct and emotionally flat. `r_cuSpecularBoost` (default 2.0×) fixes it — matching Doom 3's artists rather than the textbook.
+**Projected lights.** Each projected light carries four frustum planes (`lightProject[4]`) that define a textured light volume. The path tracer evaluates these planes to compute UV coordinates within the projection, samples the light texture at those coordinates, and applies a falloff gradient along the frustum depth. Cone angle and edge softness are derived from the frustum geometry. Getting this wrong makes every spotlight in the game look like a featureless white cone — a mistake I made many times before the implementation stabilized.
 
----
+**Direct light sampling.** For each shading point, shadow rays are cast toward up to `r_cuMaxLightSamples` randomly selected lights, weighted by $\frac{N_{\text{lights}}}{N_{\text{samples}}}$ to maintain an unbiased estimator. The shadow test is transparency-aware: it walks through alpha-tested, transmissive, and blended surfaces, attenuating the shadow ray per-material rather than treating every intersection as fully opaque. This produces correct shadows through chain-link fences, tinted glass, and particle effects.
 
-## Volumetrics
+**Soft shadows** are achieved by jittering the light sample position within the light's spatial extent. Point lights jitter within their `lightRadius3` bounds; spotlights jitter along their right and up axes. The jitter scale is configurable via `r_cuSoftShadowScale`.
 
-This is pure indulgence — *Doom 3* doesn't have volumetric lighting, and adding it is expensive. But I wanted to see those flashlight beams cutting through darkness the way they do in my memory, not the way they actually rendered in 2004.
-
-The system ray-marches between the camera and the first hit point. At each step, the kernel casts a shadow ray toward the light, computes distance attenuation, evaluates a Henyey-Greenstein phase function for directional scattering, and accumulates in-scattered radiance modulated by Beer's law transmittance. Spotlights force a minimum forward bias ($g \geq 0.7$) so their beams read as visible cones rather than diffuse fog.
-
-Projected light textures are sampled during the march too — a light with a colored gel projects that color into the fog, not just onto surfaces. It's the most expensive feature in the renderer and the one I'm least willing to cut.
+**Indirect illumination.** A single-bounce global illumination pass fires a cosine-weighted hemisphere sample from the primary hit point. The indirect ray walks through transparent surfaces (up to four steps) until it encounters an opaque surface, evaluates direct lighting there including a shadow test, and returns the result as incident radiance. The bounce fires at a configurable probability (`r_cuIndirectProb`). It fills the ambient that makes *Doom 3*'s pitch-black corridors read as physical spaces instead of floating geometry. The first time I saw light bleeding around a door frame that the original renderer left pitch black, I knew the architecture was right.
 
 ---
 
-## Getting the Look Right
+## Shading Model
 
-The math behind a path tracer is the easy part — there are textbooks for that. The hard part was making it look like *Doom 3*. Not like a generic PBR renderer that happens to load *Doom 3* assets. Like the actual game, with all its specific artistic choices baked in.
+The implementation uses a Cook-Torrance microfacet BRDF with the GGX distribution — the same shading model employed by Unreal Engine 4 (Karis, 2013) and most contemporary PBR pipelines. The model handles both rough diffuse and sharp metallic reflections within a single framework.
 
-| *Doom 3* GL Renderer | CUDA Path Tracer |
-|---|---|
-| **No ambient term.** Every pixel is lit exclusively by placed `idLight` entities. Unlit surfaces are black. | **No ambient fill, no environment map, no sky bleed.** The path tracer trusts the placed lights. If a corridor has no lights, it stays black — matching *Doom 3*'s oppressive darkness. |
-| **Windowed quadratic attenuation.** Light intensity reaches exactly zero at the radius boundary: $(1-(d/r)^2)^2$. | **Same windowed falloff reproduced exactly.** Inverse-square was tested and rejected — it bled light too far and collapsed the contrast between lit and unlit areas. The windowed curve is what creates *Doom 3*'s pools-of-light look. |
-| **2× specular in interaction shaders.** `result = diffuse + specular * 2`. Artists tuned every surface under this assumption. | **Configurable `r_cuSpecularBoost` (default 2.0×)** applied to the Cook-Torrance specular term. Without it, metals look flat and matte — technically correct, visually dead. |
-| **Specular maps** with RGB intensity. No roughness or metallic concept. | **Heuristic PBR derivation:** `roughness *= 1.0 - specLum * 0.6`, `metallic = max(metallic, specLum * 0.3)`. Maps the visual weight correctly — shiny stays shiny, rough stays rough. |
-| **Projected light textures.** `lightProject[4]` frustum planes shape every spotlight — colored gels, gobos, falloff gradients. | **Same frustum planes evaluated per-ray** to compute projection UVs. The light texture is sampled during both surface shading and volumetric marching. Without this, spotlights become featureless cones. |
-| **Draw-order compositing** of alpha-tested grates, additive particles, modulate-blended decals, translucent glass. | **Blend mode classification per-hit.** Pass-through (attenuate throughput), additive (add energy), modulate (multiply throughput), or bounce. Transparent passes don't consume bounce budget — a ray walks through 20 decals as one logical bounce. |
-| **`noShadows` opaque decals** — blood splatters, bullet marks, signage drawn as opaque surfaces that don't cast shadows. | **Special-case detection:** `noShadows` + no alpha test + no transmission + opaque blend → light the decal, composite over throughput, continue ray through. Without this, every decal becomes an opaque wall. |
-| **Ambient-only materials** for light panels, screens, HUD — stages with no diffuse/bump/specular interaction. | **`isAmbientOnly` detection** (`hasInteraction == false && numStages > 0`). Kernel treats these as self-illuminated emitters — albedo added directly to path radiance, ray passes through. Every screen glows without explicit emissive light entities. |
-| **RXGB normal maps.** X in alpha, Y in green, Z in blue. Non-standard tangent-space encoding. | **Kernel reconstructs tangent-space normals from RXGB** and fabricates an orthonormal basis from the surface normal when the tangent frame is degenerate. Wrong format = wrong lighting on every surface. |
+**Normal distribution function.** The GGX (Trowbridge-Reitz) distribution defines the microfacet orientation probability:
 
-Every row in that table cost me at least a day. The common thread: it's about matching what the original renderer *did*, not what a physically based renderer *should* do. The artists at **id Software** tuned the game under specific assumptions. My job is to honor those assumptions while adding what the original couldn't — soft shadows, indirect light, volumetric scattering.
+$$D(\mathbf{h}) = \frac{\alpha^2}{\pi\left((\mathbf{n} \cdot \mathbf{h})^2(\alpha^2 - 1) + 1\right)^2} \tag{2}$$
 
----
+where $\alpha$ is the roughness parameter and $\mathbf{h}$ is the half-vector. GGX produces heavier tails than Blinn-Phong, yielding broader specular highlights at grazing angles — the visual quality responsible for the wet-looking metal floors throughout *Doom 3*'s Mars base.
 
-## Path Tracer Cutbacks
+**Geometry term.** Smith's method with the Schlick-GGX approximation accounts for microfacet self-shadowing and masking:
 
-This is a real-time-ish path tracer for a game engine, not a production renderer. Every architectural decision reflects that.
+$$G(\mathbf{n}, \mathbf{v}, \mathbf{l}) = G_1(\mathbf{n} \cdot \mathbf{v}) \cdot G_1(\mathbf{n} \cdot \mathbf{l}) \tag{3}$$
 
-**One-bounce indirect only.** The GI pass fires a single hemisphere sample at the primary hit and evaluates direct lighting at whatever it hits. No recursive multi-bounce GI, no photon mapping, no irradiance caching. One bounce fills the ambient enough to make rooms feel solid. More bounces would multiply ray count exponentially for marginal gain in *Doom 3*'s tight, heavily occluded corridors.
+This is the term that causes rough surfaces to lose energy at steep viewing angles rather than blowing out.
 
-**Cosine-weighted hemisphere sampling everywhere.** Bounce directions are sampled proportional to $\cos\theta$ — the cheapest reasonable strategy. No BRDF importance sampling, no multiple importance sampling (MIS). MIS drastically reduces variance for glossy surfaces and small bright lights — it's the standard in production renderers. Without it, specular highlights converge slowly and caustics are effectively invisible. The tradeoff is simplicity — one sampling strategy, one PDF, no bookkeeping.
+**Fresnel term.** The Schlick approximation models reflectance variation with viewing angle:
 
-**No spectral rendering. No subsurface scattering. No caustics.** Everything is RGB — no wavelength-space dispersion or fluorescence. Every surface is opaque at the shading point — no internal scattering for skin, wax, or marble. Specular-to-diffuse light transport is invisible because the renderer only traces from the camera. For *Doom 3*'s metal corridors and demon-infested labs, none of this matters.
+$$F(\theta) = F_0 + (1 - F_0)(1 - \cos\theta)^5 \tag{4}$$
 
-**No denoiser.** Production and real-time RT renderers run learned denoisers that reconstruct clean images from 1–4 SPP. This path tracer relies on temporal accumulation — brute-force sample count. A still camera converges cleanly. A moving camera sees full noise every frame.
+The diffuse component uses energy-conserving Lambertian reflectance: $k_d = (1 - F)(1 - \text{metallic})$, scaled by $\frac{\text{albedo}}{\pi}$. Metallic surfaces receive no diffuse contribution — all color is carried through specular reflection.
 
-**Hard caps everywhere.** The scene is bounded by compile-time constants — 1M triangles, 2K textures, 512 lights, 2M BVH nodes — `cudaMalloc`'d once at startup. Transparency-aware shadow rays walk through at most 8 surfaces before giving up. Every pixel gets the same SPP regardless of variance. A production renderer would stream geometry, use virtual texturing, and trace until the ray exits the scene. These limits are generous for *Doom 3* but make the architecture unsuitable for open-world scenes or film assets.
-
-The result is a renderer that produces plausible images at interactive rates — good enough to walk through *Doom 3* and see real light bounce off real geometry. The missing features aren't optimizations to add later. They're architectural decisions that would require rewriting the kernel from scratch. This path tracer answers one question: what does *Doom 3* look like with real light transport? Everything else is a different project.
+**Specular correction.** One implementation detail consumed a full week of debugging before resolution. *Doom 3*'s original renderer doubles the specular contribution in its interaction shaders: `result = diffuse + specular * 2`. Every surface in the game was tuned under this assumption. Without the corresponding boost, the path-traced scene appeared physically correct but emotionally flat — every metal surface looked dead. The CVar `r_cuSpecularBoost` (default 2.0×) compensates for this, matching the artists' expectations rather than the textbook.
 
 ---
 
-## Accumulation and Convergence
+## Volumetric Scattering
 
-There's no denoiser. I rely on brute-force temporal accumulation instead — each frame's path-traced result adds to a persistent HDR buffer, and the tone mapper divides by the frame count before converting to LDR. Move the camera and it resets. Stand still and watch it converge.
+This feature is pure indulgence — *Doom 3* shipped without volumetric lighting, and adding it is computationally expensive. But I wanted to see those flashlight beams cutting through darkness the way they exist in memory, not the way they actually rendered in 2004.
 
-At 4 SPP per frame, the first frame is grainy but recognizable. After 50 frames, direct lighting is clean. After a few hundred, indirect illumination and soft shadows settle. It's satisfying to watch — like developing a photograph, except each frame is another layer of exposure.
+The implementation ray-marches between the camera and the first surface intersection. At each march step, the kernel casts a shadow ray toward the light source, computes distance attenuation, evaluates a Henyey-Greenstein phase function for directional scattering, and accumulates in-scattered radiance modulated by Beer's law transmittance. Spotlights enforce a minimum forward scattering bias ($g \geq 0.7$) so that their beams read as visible cones rather than diffuse fog.
 
-Russian roulette terminates low-energy paths probabilistically after a minimum bounce count, compensating with an inverse probability weight to keep the estimator unbiased. A firefly clamp caps individual sample brightness so one hot pixel doesn't blow out the average. Between these two, convergence is stable without visible bias.
-
----
-
-## What It Costs
-
-The whole thing is gated behind a CMake flag (`-DCUDA_PATHTRACER=ON`) and a runtime CVar (`r_cuDraw 1`). Turn it off and dhewm3 runs its normal OpenGL renderer, unchanged. Turn it on and CUDA takes over completely — GL only handles the final blit.
-
-At 0.5× render scale (the default), I get interactive rates on my RTX hardware. Full resolution is slower but converges faster per frame. Around 50 CVars control everything — SPP, bounce depth, Russian roulette, soft shadow scale, sky color, fog density, tone mapping — all adjustable from the *Doom 3* console while you play.
-
-The biggest embarrassment is `glDrawPixels`. Every frame copies the entire pixel buffer from device to host and back to the GPU through the GL pipeline. There's no GL-CUDA interop. It works. It's not fast. A shared PBO or Vulkan interop would kill that round trip, but for an experimental renderer, I picked the dumbest thing that worked and moved on.
+Projected light textures are sampled during the march as well — a light with a colored gel projects that color into the participating medium, not only onto surfaces. This is the most expensive feature in the renderer and the one I am least willing to remove.
 
 ---
 
-## What I Learned
+## Artist-Faithful Rendering
 
-Building a path tracer inside a shipping engine — even one from 2004 — is a fundamentally different problem than building one from scratch. You don't get to define the scene format. You don't get to choose how materials work. You get `drawSurf_t` arrays and `idMaterial` pointers and you make them work.
+The mathematical foundations of path tracing are well-documented. The substantially harder problem was reproducing the specific visual identity of *Doom 3* — not a generic PBR renderer that happens to load *Doom 3* assets, but something that looks like the actual game with all its artistic decisions preserved.
 
-The hardest part wasn't the BVH, or the kernel architecture, or even wiring CUDA into CMake. It was getting the *feel* right. *Doom 3* has a specific look — heavy specular on metal, pitch-black shadows with sharp falloff, warm orange light pooling on concrete. The algorithms are in every textbook. But a physically correct renderer doesn't automatically reproduce what id Software's artists intended. I kept producing frames that were technically right and emotionally dead. Matching artistic intent matters more than matching the equations.
+**No ambient fill.** The path tracer trusts the placed lights exclusively — no environment map, no sky bleed, no constant ambient term. If a corridor contains no `idLight` entities, it remains black. That oppressive darkness is *Doom 3*'s visual signature. Introducing hemispheric ambient would be trivial and would destroy the feel.
 
-idTech 4's material system is more complex than it looks. A single material can have dozens of shader stages with animated registers, conditional expressions, and blend operations that interact in ways the documentation doesn't cover. Mapping that down to a flat PBR struct means making judgment calls about what to keep and what to lose. I got many of those calls wrong before I got them right.
+**Blend-mode classification per hit.** The original renderer composites alpha-tested grates, additive particles, modulate-blended decals, and translucent glass through draw-order blending. The path tracer classifies each intersection — pass-through (attenuate throughput), additive (add energy), modulate (multiply throughput), or bounce — so that transparent passes do not consume bounce budget. A single ray may traverse 20 decal layers as one logical bounce. `noShadows` opaque decals — blood splatters, bullet marks — receive special-case detection: light the decal, composite over throughput, continue the ray. Without this classification, every decal becomes an opaque wall.
 
-You learn more about a renderer by replacing it than by reading about it. That's why I put a path tracer in a 2004 game engine.
+The principle underlying all of these decisions: the objective is to match what the original renderer *did*, not what a physically based renderer *should* do. The artists at **id Software** tuned every surface under assumptions that were never meant to be portable to a different rendering architecture. Honoring those assumptions while adding what the original could not — soft shadows, indirect illumination, volumetric scattering — is the central design constraint.
 
 ---
 
-## What's Next
+## Limitations and Runtime Characteristics
 
-The current renderer rebuilds the entire BVH every frame. The obvious next step is a two-level acceleration structure — a static BLAS for the world geometry, rebuilt TLAS only for moving entities. That alone should cut construction time by an order of magnitude.
+This is a real-time-ish path tracer for a game engine, not a production renderer. Every architectural decision reflects that constraint.
 
-After that, `glDrawPixels` needs to die. CUDA-OpenGL interop through a shared PBO, or a full port to Vulkan compute, would eliminate the device-to-host-to-device round trip that currently bottlenecks every frame.
+**One-bounce indirect illumination.** The GI pass fires a single hemisphere sample at the primary hit point and evaluates direct lighting at whatever surface it reaches. No recursive multi-bounce GI, no photon mapping, no irradiance caching. One bounce fills the ambient sufficiently to make rooms feel solid. Additional bounces would multiply ray count exponentially for marginal perceptual gain in *Doom 3*'s tight, heavily occluded corridors.
+
+**Cosine-weighted hemisphere sampling.** Bounce directions are sampled proportional to $\cos\theta$ — the simplest reasonable importance sampling strategy. No BRDF importance sampling, no multiple importance sampling (MIS). MIS would substantially reduce variance for glossy surfaces and small bright light sources — it is the standard in production renderers. Without it, specular highlights converge slowly and caustics are effectively invisible. The tradeoff is implementation simplicity: one sampling strategy, one PDF, no bookkeeping.
+
+**No spectral rendering, no subsurface scattering, no caustics.** All computation is RGB — no wavelength-space dispersion or fluorescence. Every surface is opaque at the shading point — no internal scattering for skin, wax, or marble. Specular-to-diffuse light transport paths are invisible because the renderer traces exclusively from the camera. For *Doom 3*'s metal corridors and demon-infested laboratories, none of these omissions are perceptible.
+
+**No denoiser.** The renderer relies on brute-force temporal accumulation — each frame adds to a persistent HDR buffer, and the tone mapper divides by the accumulated frame count before LDR conversion. Camera movement resets the buffer. At 4 SPP per frame, the first frame is grainy but recognizable; after 50 frames, direct lighting is clean; after several hundred, soft shadows converge. Russian roulette terminates low-energy paths probabilistically with inverse-probability compensation to maintain an unbiased estimator. A firefly clamp caps individual sample brightness to prevent single hot pixels from dominating the average.
+
+**Hard resource caps.** The scene is bounded by compile-time constants — 1M triangles, 2K textures, 512 lights, 2M BVH nodes — allocated once at startup via `cudaMalloc`. Transparency-aware shadow rays walk through at most 8 surfaces before terminating. Every pixel receives the same SPP regardless of local variance. These limits are generous for *Doom 3* but render the architecture unsuitable for open-world scenes or film-resolution assets.
+
+**Runtime configuration.** The entire system is gated behind a CMake flag (`-DCUDA_PATHTRACER=ON`) and a runtime CVar (`r_cuDraw 1`). With the flag disabled, dhewm3 runs its standard OpenGL renderer unmodified. Approximately 50 CVars control SPP, bounce depth, Russian roulette thresholds, soft shadow scale, sky color, fog density, and tone mapping operator — all adjustable from the *Doom 3* console during gameplay. At 0.5× render scale (the default), the renderer achieves interactive rates on RTX hardware.
+
+The result is a renderer that produces plausible images at interactive rates — sufficient to walk through *Doom 3* and observe real light transport interacting with real geometry. The omitted features are not optimizations to add incrementally. They are architectural decisions that would require rewriting the kernel from scratch. This path tracer answers one question: what does *Doom 3* look like with physically based light transport? Everything else is a different project.
+
+---
+
+## Discussion
+
+The most instructive failure mode was silent visual degradation — the renderer produced an image, but the image was wrong in ways that required A/B comparison with the GL backend to identify. Three cases stand out.
+
+**Specular energy loss.** Early builds produced physically plausible frames where every metal surface appeared matte. The Cook-Torrance evaluation was correct. The bug was upstream: *Doom 3*'s interaction shaders apply a 2× multiplier to the specular term, and every material in the game was authored under that assumption. A side-by-side comparison of a single brushed-steel panel — GL on the left, CUDA on the right — made the discrepancy obvious. Without the reference, the path-traced result looked merely conservative, not broken. This class of bug — correct math producing wrong results because the data was tuned for different math — recurred throughout the project.
+
+**Tangent frame degeneracy.** Certain func_static entities — particularly pipes and trim geometry — rendered with inverted or scrambled normals. The issue was not in the RXGB reconstruction but in the tangent vectors themselves: some meshes shipped with zero-length or collinear tangent/bitangent pairs. The GL renderer never exposed this because its per-pixel lighting computed tangent space differently. The fix — detecting degenerate frames and fabricating an orthonormal basis from the geometric normal — was trivial once diagnosed. Diagnosis took three days because the visual artifact (dark splotches on curved surfaces) suggested a BVH intersection bug, not a shading input problem.
+
+**Projected light UV precision.** The `lightProject[4]` frustum planes produce UV coordinates through four dot products. Floating-point precision in the frustum depth calculation caused banding artifacts at light boundaries — visible as hard rings in what should have been smooth falloff gradients. The GL renderer masked this through its per-fragment stencil-and-blend pipeline, which never evaluated the projection as a continuous function. Switching the depth interpolation to a normalized formulation with an explicit epsilon floor eliminated the banding.
+
+Each of these bugs shared a common structure: the path tracer exposed an implicit contract between *Doom 3*'s data and its original renderer that was never documented, because neither side needed to be explicit about it. Replacing the renderer broke every such contract simultaneously. The debugging process was less about fixing algorithms and more about reverse-engineering artistic and engineering assumptions from twenty-year-old render output.
+
+---
+
+## Future Work
+
+The renderer is functional as a demonstration — it answers the question it was built to answer and does so at interactive rates. Further optimization is not the immediate priority.
+
+The next step is porting the CUDA kernel code to an OpenCL counterpart. The current implementation locks the project to NVIDIA hardware, which limits both the potential audience and the hardware I can test against. OpenCL would open the path tracer to AMD and Intel GPUs without requiring a full architectural rewrite — the kernel structure, BVH layout, and material pipeline are not CUDA-specific. The CUDA-to-OpenCL translation is mostly mechanical (kernel launch syntax, memory allocation API, built-in math functions), though Thrust's `sort_by_key` would need a replacement — likely a custom radix sort or a dependency on a library like CLRadixSort.
+
+Once the compute backend is portable, the optimization surface becomes worth revisiting: two-level acceleration structures to avoid full BVH rebuilds, CUDA-GL or CL-GL interop to eliminate the `glDrawPixels` round trip, and importance sampling strategies beyond cosine-weighted hemispheres. None of these change what the renderer produces. They change how fast it gets there.
 
 ---
 
@@ -376,3 +371,5 @@ After that, `glDrawPixels` needs to die. CUDA-OpenGL interop through a shared PB
 - id Software, [Doom 3 GPL Source Code](https://github.com/id-Software/DOOM-3), 2011
 - Matt Pharr, Wenzel Jakob, Greg Humphreys, *Physically Based Rendering: From Theory to Implementation*, 4th Edition
 - Brian Karis, [Real Shading in Unreal Engine 4](https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf), SIGGRAPH 2013
+- James T. Kajiya, [The Rendering Equation](https://dl.acm.org/doi/10.1145/15886.15902), SIGGRAPH 1986
+- Turner Whitted, [An Improved Illumination Model for Shaded Display](https://dl.acm.org/doi/10.1145/358876.358882), Communications of the ACM, 1980
