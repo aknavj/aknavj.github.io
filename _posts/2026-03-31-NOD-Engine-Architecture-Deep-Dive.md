@@ -227,9 +227,7 @@ The VtMR SDK also documents formats Ghost doesn't use at all — `.ndd` for disc
 
 ## What's Next
 
-The architecture is documented. The formats are mapped. The simulation, audio, effects, and scripting layers are catalogued. The next question is what's actually inside the data — what 8 levels, 4500 textures, and 207 cutscenes tell you about a game that was being built and abandoned at the same time.
-
-Templates reference AI types that never spawn. Effect controllers sit defined in `.nfx` with no level to trigger them. Model files exist with no template to instantiate them. Control modes for the Vulture and Siege Tank are fully implemented but only one level has the vehicles to use them. The build is a mid-development snapshot, and the gaps are as telling as the data.
+The architecture is documented. The formats are mapped. The simulation, audio, effects, and scripting layers are catalogued. The next question is what's actually inside the data.
 
 That's Part 3: what the data says about the game they were trying to make.
 
