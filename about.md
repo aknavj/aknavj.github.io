@@ -1,30 +1,36 @@
 ---
-layout: page
+layout: section
 title: About
+subtitle: Who I am and what I build.
+permalink: /about/
+index_label: "05"
 ---
 
-I specialize in custom software development and creating workflow tools for content creators. I'm passionate about learning new things every day and finding optimal time-saving solutions. My personal goal is to optimize workflows and make life easier.
+Indie developer building engines, tools, and graphics tech from the ground up. 15+ years of professional engine and rendering work — now channeling all of that into solo projects where I own every layer of the stack.
 
-## Providing
+## Current Focus
 
-* Consulting services
-* Integration services
-* Custom software development services
+* Engine architecture & custom render pipelines
+* GPU compute — CUDA, NPU, ML/AI acceleration
+* Reverse engineering game internals
+* Building tools I actually want to use
 
-## Language
+## Background
 
-* Czech
-* English
+Started with StarCraft map editors and GTK Radiant in the early 2000s. Moved through Cinema 4D, wrote my first OpenGL engines, and spent 15+ years shipping real-time graphics professionally. Now going indie.
 
-## Social
+## Languages
+
+* Czech (native)
+* English (fluent)
+
+## Links
 
 * [LinkedIn](https://www.linkedin.com/in/ondrejvanka/)
-* [X](https://x.com/aknavj)
+* [X / Twitter](https://x.com/aknavj)
+* [GitHub](https://github.com/aknavj)
+* [gfxdev.org](https://www.gfxdev.org/)
 
 ## Contact
 
-You can reach me on several email addresses.
-
-* [Personal](mailto:ondravanka@gmail.com)
-* [Professional](mailto:ondrej.vanka@proton.me)
-* [Business/Invoicing](mailto:ondrej@vanka.net)
+* [ondrej.vanka@proton.me](mailto:ondrej.vanka@proton.me)

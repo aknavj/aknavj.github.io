@@ -1,0 +1,24 @@
+- title: Static Art
+  idx: "01"
+  url: /static-art/
+  bg: /assets/img/renders-stills/utds-render.png
+- title: Realtime Art
+  idx: "02"
+  url: /realtime-art/
+  #video: "HWzbplsBm0A"
+  bg: /assets/img/renders-rt/terrain-georendering-automotive.png
+- title: Resources
+  idx: "03"
+  url: /resources/
+  desc: Free assets & tools
+  video: "IqzaDuWuOcs"
+- title: Research
+  idx: "04"
+  url: /research/
+  desc: Articles & devlogs
+  bg: /assets/img/posts/d3pt_bhvdebug.png
+- title: About
+  idx: "05"
+  url: /about/
+  desc: Who I am
+  bg: /assets/img/renders-rt/stereolabs-implementation.png

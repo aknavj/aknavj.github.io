@@ -1,3 +1,3 @@
 ---
-layout: portfolio
+layout: home
 ---

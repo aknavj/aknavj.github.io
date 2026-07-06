@@ -1,9 +1,9 @@
 # global settings
-title: "Ondrej Vanka"
+title: "aknavj"
 author:
   name: Ondrej Vanka
   email: ondrej.vanka@proton.me
-description: "graphics programmer — demoscene, reverse engineering, 3D"
+description: "Just a guy interested in graphics art, graphics programming, and game development."
 url: "https://aknavj.github.io"
 baseurl: ""
 github_username: aknavj
@@ -26,7 +26,7 @@ defaults:
   - scope:
       path: ""
     values:
-      layout: "portfolio"
+      layout: "section"
 
 # exclude build artifacts
 exclude:

@@ -1,0 +1,63 @@
+---
+layout: default
+---
+<main class="section">
+    <header class="section-head">
+        <span class="section-index">{{ page.index_label }} — {{ site.author.name | upcase }}</span>
+        <h1 class="section-title">{{ page.title }}</h1>
+        {% if page.subtitle %}<p class="section-sub">{{ page.subtitle }}</p>{% endif %}
+    </header>
+
+    {% if page.gallery %}
+    <div class="gallery" id="gallery">
+        {% for item in page.gallery %}
+        <button class="gallery-item{% if item.video or item.youtube %} is-video{% endif %}"
+                data-type="{% if item.youtube %}youtube{% elsif item.video %}video{% else %}image{% endif %}"
+                data-full="{% if item.youtube %}{{ item.youtube }}{% elsif item.video %}{{ item.video | relative_url }}{% else %}{{ item.image | relative_url }}{% endif %}"
+                data-title="{{ item.title | escape }}"
+                data-caption="{{ item.caption | escape }}">
+            {% if item.youtube %}
+            <img class="gallery-media" src="{% if item.poster %}{{ item.poster | relative_url }}{% else %}https://i.ytimg.com/vi/{{ item.youtube }}/maxresdefault.jpg{% endif %}" onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/{{ item.youtube }}/mqdefault.jpg';" alt="{{ item.title | escape }}" loading="lazy">
+            <span class="gallery-badge" aria-hidden="true">&#9658;</span>
+            {% elsif item.video %}
+            <video class="gallery-media" src="{{ item.video | relative_url }}#t=0.5"{% if item.poster %} poster="{{ item.poster | relative_url }}"{% endif %} muted loop playsinline preload="metadata"></video>
+            <span class="gallery-badge" aria-hidden="true">&#9658;</span>
+            {% else %}
+            <img src="{{ item.image | relative_url }}" alt="{{ item.title | escape }}" loading="lazy">
+            {% endif %}
+            <span class="gallery-cap">
+                <span class="gt">{{ item.title }}</span>
+                {% if item.caption %}<span class="gc">{{ item.caption }}</span>{% endif %}
+            </span>
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if content != '' %}
+    {% if page.wide %}
+    <div class="section-body">
+        {{ content }}
+    </div>
+    {% else %}
+    <div class="section-body prose">
+        {{ content }}
+    </div>
+    {% endif %}
+    {% endif %}
+</main>
+
+{% if page.gallery %}
+<div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <button class="lb-close" id="lb-close" aria-label="Close">&#10005;</button>
+    <button class="lb-prev" id="lb-prev" aria-label="Previous image">&#8249;</button>
+    <figure class="lb-figure">
+        <img id="lb-img" src="" alt="">
+        <video id="lb-video" controls playsinline preload="metadata" hidden></video>
+        <div id="lb-youtube" class="lb-youtube" hidden></div>
+        <figcaption id="lb-cap"></figcaption>
+    </figure>
+    <button class="lb-next" id="lb-next" aria-label="Next image">&#8250;</button>
+    <div class="lb-counter" id="lb-counter"></div>
+</div>
+{% endif %}
