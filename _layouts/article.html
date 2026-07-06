@@ -1,139 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page.title }} — {{ site.author.name }}</title>
-    <meta name="description" content="{{ page.excerpt | strip_html | truncatewords: 40 }}">
-    <meta name="author" content="{{ site.author.name }}">
+---
+layout: default
+---
+{% assign catlist = page.categories | join: ' ' | split: ' ' %}
+{% assign taglist = page.tags | join: ' ' | split: ' ' %}
+<article class="article">
+    <a href="{{ '/research/' | relative_url }}" class="article-back">&#8592; Research</a>
 
-    <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23050510'/><rect x='1' y='1' width='30' height='30' rx='3' fill='none' stroke='%2300aaff' stroke-width='2'/><polygon points='10,6 26,16 10,26' fill='%2300aaff'/></svg>" type="image/svg+xml">
-
-    <!-- Retro / Sci-Fi Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-
-    <!-- Shared portfolio vars + article-specific styles -->
-    <link rel="stylesheet" href="{{ '/assets/css/article.css' | relative_url }}">
-
-    <!-- KaTeX for math rendering -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
-        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}]});"></script>
-</head>
-<body>
-
-    <!-- ===== SCANLINE OVERLAY ===== -->
-    <div class="scanlines"></div>
-
-    <!-- ===== NAVIGATION ===== -->
-    <nav class="retro-nav" id="main-nav">
-        <a href="{{ '/' | relative_url }}" class="nav-logo"><span class="blink">▶</span> AKNAVJ://RENDER</a>
-        <div class="nav-links" id="nav-links">
-            <a href="{{ '/' | relative_url }}">HOME</a>
-            <a href="{{ '/' | relative_url }}#part-scanner">ARCHIVES</a>
-            <a href="{{ '/' | relative_url }}#part-signal">COMMS</a>
+    <header class="article-head">
+        <div class="article-meta">
+            {% for cat in catlist %}<span class="cat">{{ cat }}</span>{% endfor %}
+            <span>{{ page.date | date: "%Y.%m.%d" }}</span>
         </div>
-        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+        <h1 class="article-title">{{ page.title }}</h1>
+        {% if taglist.size > 0 %}
+        <div class="article-tags">
+            {% for tag in taglist %}<span class="tag-chip">{{ tag }}</span>{% endfor %}
+        </div>
+        {% endif %}
+    </header>
+
+    <div class="prose">
+        {{ content }}
+    </div>
+
+    <nav class="article-nav">
+        {% if page.previous %}
+        <a href="{{ page.previous.url | relative_url }}" class="prev-link">
+            <span class="dir">&#8592; Previous</span>
+            <span class="t">{{ page.previous.title }}</span>
+        </a>
+        {% else %}<span></span>{% endif %}
+        {% if page.next %}
+        <a href="{{ page.next.url | relative_url }}" class="next-link">
+            <span class="dir">Next &#8594;</span>
+            <span class="t">{{ page.next.title }}</span>
+        </a>
+        {% else %}<span></span>{% endif %}
     </nav>
-
-    <!-- ===== ARTICLE ===== -->
-    <main class="article-wrap">
-
-        <!-- HEADER  -->
-        <header class="article-header">
-            <div class="article-meta-top">
-                <a href="{{ '/' | relative_url }}" class="back-link">◄ BACK TO INDEX</a>
-            </div>
-            <div class="article-tag-line">
-                {% if page.categories.size > 0 %}
-                {% for cat in page.categories %}
-                <span class="article-cat">[{{ cat | upcase }}]</span>
-                {% endfor %}
-                {% endif %}
-                <span class="article-date">{{ page.date | date: "%Y-%m-%d" }}</span>
-            </div>
-            <h1 class="article-title">{{ page.title | upcase }}</h1>
-            {% if page.tags.size > 0 %}
-            <div class="article-tags">
-                {% for tag in page.tags %}
-                <span class="tag-chip">{{ tag | upcase }}</span>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </header>
-
-        <!-- CONTENT  -->
-        <article class="article-body panel-glass">
-            {{ content }}
-        </article>
-
-        <!-- FOOTER NAV  -->
-        <nav class="article-footer-nav">
-            {% if page.previous %}
-            <a href="{{ page.previous.url | relative_url }}" class="article-nav-link prev-link">
-                <span class="nav-dir">◄ PREV</span>
-                <span class="nav-title">{{ page.previous.title | upcase | truncatewords: 8 }}</span>
-            </a>
-            {% else %}
-            <span></span>
-            {% endif %}
-            {% if page.next %}
-            <a href="{{ page.next.url | relative_url }}" class="article-nav-link next-link">
-                <span class="nav-dir">NEXT ►</span>
-                <span class="nav-title">{{ page.next.title | upcase | truncatewords: 8 }}</span>
-            </a>
-            {% else %}
-            <span></span>
-            {% endif %}
-        </nav>
-
-    </main>
-
-    <!-- ===== FOOTER ===== -->
-    <footer class="retro-footer">
-        <p>&copy; {{ site.time | date: '%Y' }} {{ site.author.name }} — CODED WITH ♥ AND RENDER PASSES</p>
-    </footer>
-
-    <!-- ===== NAV + TABLE SCROLL WRAPPERS ===== -->
-    <script>
-    (function(){
-        /* Mobile nav */
-        var toggle = document.getElementById('nav-toggle');
-        var links  = document.getElementById('nav-links');
-        if(toggle && links){
-            toggle.addEventListener('click', function(){ links.classList.toggle('open'); });
-            links.querySelectorAll('a').forEach(function(a){
-                a.addEventListener('click', function(){ links.classList.remove('open'); });
-            });
-        }
-
-        /* Wrap every table in a horizontal-scroll container */
-        var tables = document.querySelectorAll('.article-body table');
-        tables.forEach(function(tbl){
-            var wrap = document.createElement('div');
-            wrap.className = 'table-scroll-wrap';
-            tbl.parentNode.insertBefore(wrap, tbl);
-            wrap.appendChild(tbl);
-
-            /* hint label */
-            if(tbl.scrollWidth > wrap.clientWidth){
-                var hint = document.createElement('span');
-                hint.className = 'table-scroll-hint';
-                hint.textContent = '◄ SCROLL ►';
-                wrap.parentNode.insertBefore(hint, wrap.nextSibling);
-            }
-
-            /* remove fade mask once scrolled to end */
-            wrap.addEventListener('scroll', function(){
-                if(wrap.scrollLeft > 20) wrap.classList.add('no-fade');
-                else wrap.classList.remove('no-fade');
-            });
-        });
-    })();
-    </script>
-</body>
-</html>
+</article>

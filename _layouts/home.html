@@ -1,0 +1,23 @@
+---
+layout: default
+---
+<section class="hub">
+    <div class="hub-bg" id="hub-bg" style="background-image: url('{{ '/assets/img/posts/d3pt_pathtraced.png' | relative_url }}');"></div>
+    <div class="hub-bg hub-bg-top" id="hub-bg-top"></div>
+    <div class="hub-video" id="hub-video" aria-hidden="true">
+        <div id="hub-video-frame"></div>
+    </div>
+
+    <header class="hub-top">
+        <a class="hub-brand" href="{{ '/' | relative_url }}">AKNAVJ</a>
+        {% include socials.html class="hub-socials" %}
+    </header>
+
+    <nav class="hub-nav">
+        {% for s in site.data.sections %}
+        <a href="{{ s.url | relative_url }}" data-bg="{{ s.bg | relative_url }}"{% if s.video %} data-video="{{ s.video }}"{% endif %}>{{ s.title }}</a>
+        {% endfor %}
+    </nav>
+
+    <p class="hub-tagline">{{ site.description }}</p>
+</section>
