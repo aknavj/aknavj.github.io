@@ -1,7 +1,7 @@
 ---
 layout: article
 title: "Reversing a Dead Legend: Inside StarCraft Ghost's NOD Engine - PART 2"
-description: "A technical deep dive into the NOD engine architecture — boot sequence, debug memory allocator, shader factory, entity hierarchy, AI class system, simulation layer, audio pipeline, effect system, and 23 proprietary file formats reverse-engineered from a leaked Xbox prototype."
+description: "A technical deep dive into the NOD engine architecture — boot sequence, debug memory allocator, shader factory, entity hierarchy, AI class system, simulation layer, audio pipeline, effect system, and the proprietary file formats reverse-engineered from a leaked Xbox prototype."
 tags: reverse-engineering starcraft ghost nod-engine nihilistic disassembly
 categories: reverse-engineering
 ---
@@ -51,9 +51,9 @@ WinMain
   +-- ~tSequence()                           (reverse order)
 ```
 
-Debug before memory. Memory before files. Files before input. Each layer can only call into the layers below it. After the foundation, the renderer comes up — `renderModel_Startup()` creates its hashtable for model lookup, `renderKeyframe_Startup()` does the same for animations, and `rlMain_Open()` initializes the Direct3D 8 device at a base resolution of 640×480. Then the game layer: voices, templates, the entity factory, and the AI class registry. Finally, the script system with its 256-timer pool for mission logic.
+The ordering is strict — debug output before memory, memory before files, files before input — because each layer can only call into the layers below it. After the foundation, the renderer comes up — `renderModel_Startup()` creates its hashtable for model lookup, `renderKeyframe_Startup()` does the same for animations, and `rlMain_Open()` initializes the Direct3D 8 device at a base resolution of 640×480. Then the game layer: voices, templates, the entity factory, and the AI class registry. Finally, the script system with its 256-timer pool for mission logic.
 
-**The main loop is a state machine wrapping a fixed pipeline.** `tSequence::MainLoop()` drives a game state machine — `IDLE` through `MAIN_MENU`, `START_SINGLE_PLAYER`, `PLAY_CUTSCENE`, `CHANGE_LEVEL`, and `QUIT_GAME`. Within the play state, every frame runs the same fixed sequence — read input, step the simulation (physics, combat, AI), draw the world through the portal system, update audio, update the HUD, flip the backbuffer. No job system, no parallel dispatch. A straight pipeline on a single thread.
+**The main loop is a state machine wrapping a fixed pipeline.** `tSequence::MainLoop()` drives a game state machine — `IDLE` through `MAIN_MENU`, `START_SINGLE_PLAYER`, `PLAY_CUTSCENE`, `CHANGE_LEVEL`, and `QUIT_GAME`. Within the play state, every frame runs the same fixed sequence — read input, step the simulation (physics, combat, AI), draw the world through the portal system, update audio, update the HUD, flip the backbuffer. There is no job system and no parallel dispatch; the whole game is a straight pipeline on a single thread.
 
 **Shutdown is the exact reverse.** `~tSequence()` tears down scripts first, then game systems, the renderer, and finally the foundation — last in, first out. The engine is fully deterministic from boot to exit. If something leaks, `stdMemory` tells you exactly which allocation survived and who made it.
 
@@ -99,7 +99,7 @@ Every shader type also includes a surface sound enum — `METAL`, `WOOD`, `DIRT`
 
 **The rendering pipeline sorts before it draws.** `tSortList` maintains a depth-sorted queue with three entry types — surface groups, things, and effects. Every visible sector pushes its transparent surfaces and entities onto the sort list; after all sectors are traversed, the list renders back-to-front in one pass. Opaque geometry renders front-to-back per sector. This is the classic portal-engine split: opaque first for early-Z rejection, transparent sorted globally.
 
-**The shadow pipeline offers six quality levels** — from blob drop-shadows to full hardware-accelerated shadows. `tRenderOptions` also exposes a rich set of debug flags that survive in the build — wireframe, color-coded sectors, freeze visibility, vertex-only lighting, among others. These exist because it's a development build — and they reveal exactly what the developers needed to diagnose during production.
+**The shadow pipeline offers six quality levels**, and the enum names spell out the progression: `SHADOW_OFF`, `SHADOW_DROP` (a blob under the character), `SHADOW_TEXROUGH`, `SHADOW_TEXFULL` (the default), `SHADOW_TEXFULLHW`, and `SHADOW_FULL` — from nothing, through projected texture shadows at increasing fidelity, to full hardware-accelerated shadows. `tRenderOptions` also exposes a rich set of debug flags that survive in the build — wireframe, color-coded sectors, freeze visibility, vertex-only lighting, among others. These exist because it's a development build — and they reveal exactly what the developers needed to diagnose during production.
 
 **42 vertex shader programs,** each compiled at four LOD levels, loaded from disk on demand. Twelve pixel shader programs handle the complex surface types — bump reflections, ghost suit Fresnel, lava, animated water normal mapping. Everything else falls back to fixed-function multi-texturing. For Xbox hardware in 2002, this is a well-budgeted split.
 
@@ -131,13 +131,13 @@ The thing type enum defines thirteen IDs, but three — Camera (type 1), Effect 
 
 `gameScene` loads `.nsd` files — entity positions, rotations, sector assignments, model references. Each scene also packs in global rendering state: sun direction, ambient color, fog, skybox, environment maps. There are typed spawn points for player starts, conversation starts, and AI interest spots. The loader rejects anything below scene version 9.
 
-`tWorld` holds everything together — the sector array, portal links, terrain references, lightmap and environment map arrays, player start points, interest spots, and three entity lists: active, inactive, and hibernating. That three-list design is a streaming trick. Entities in visible sectors are active. Entities in adjacent sectors stay loaded but inactive. Everything else hibernates. When portal visibility changes, entities move between lists with a pointer swap — no allocation, no deserialization. The world also owns a Havok `GeometricPrimitive` for level-wide collision clipping, and tracks initial GUID values for both entity and script systems to keep serialization consistent across save/load.
+`tWorld` holds everything together — the sector array, portal links, terrain references, lightmap and environment map arrays, player start points, interest spots, and three entity lists: active, inactive, and hibernating. That three-list design is a streaming trick. Entities in visible sectors are active. Entities in adjacent sectors stay loaded but inactive. Everything else hibernates. When portal visibility changes, entities move between lists with a pointer swap — nothing is allocated or deserialized. The world also owns a Havok `GeometricPrimitive` for level-wide collision clipping, and tracks initial GUID values for both entity and script systems to keep serialization consistent across save/load.
 
 ---
 
 ## The AI Class System
 
-**`cAIClass` is a factory base with one virtual method:** `NewInstance()`. Each AI class carries a name, a prototype pointer, and a reference count, stored in a hashtable capped at 128 classes. Intermediate base classes define locomotion — `aiClassBaseWalker` for ground infantry, `aiClassBaseFlyer` for air units, `aiClassBaseVehicle` for ground vehicles, `aiClassBaseFloorGun` for turrets, boss-specific bases for the Goliath and Brain encounters, and `aiClassBaseWanderer` for patrol loops.
+**`cAIClass` is a factory base with one virtual method:** `NewInstance()`. Each AI class carries a name, a prototype pointer, and a reference count, stored in a hashtable capped at 128 classes. Intermediate base classes define locomotion — `aiClassBaseWalker` for ground infantry, `aiClassBaseFlyer` for air units, `aiClassBaseVehicle` for ground vehicles, `aiClassBaseFloorGun` for turrets, dedicated boss bases (`aiClassBaseBossGoliath`, `aiClassBaseBossBrain`), and `aiClassBaseWanderer` for patrol loops.
 
 **45 AI classes span five factions.**
 
@@ -161,9 +161,9 @@ Perception runs through `aiAwareness`, which manages two fixed arrays — eight 
 
 ## The Simulation Layer
 
-**The player control system is a 47-state machine.** `cPlayerControl` inherits from `cControl` and dispatches per-state update functions — idle, walk, run, crouch-idle, crouch-walk, fall, jump, first-person, gun-aim, sniper scope, ground pound, and dozens of transitional states between them. Each locomotion state carries its own speed blend constant and analog dead zone. The state machine handles fidget animations — if the player stands still long enough, Nova shifts her weight or adjusts her grip.
+**The player control system is a massive-state machine.** `cPlayerControl` inherits from `cControl` and dispatches per-state update functions — idle, walk, run, crouch-idle, crouch-walk, fall, jump, first-person, gun-aim, sniper scope, ground pound, and dozens of transitional states between them. Each locomotion state carries its own speed blend constant and analog dead zone. The state machine handles fidget animations — if the player stands still long enough, Nova shifts her weight or adjusts her grip.
 
-Six control modes effectively rewire how the player interacts with the game. `simControlCombat` is standard third-person shooting. `simControlAcro` takes over for jumping, climbing, wall-running. `simControlSniper` locks into a scope. `simControlSpecial` handles psi abilities. `simControlVulture` and `simGoliathControl` pilot the hover-bike and mech respectively, each with its own physics model. `simControlZTarget` adds lock-on targeting. Mode switches happen based on gameplay state, not direct player input — the system figures out which mode you should be in.
+Dedicated control modes rewire how the player interacts with the game. `simControlCombat` is standard third-person shooting. `simControlAcro` takes over for jumping, climbing, wall-running. `simControlSniper` locks into a scope. `simControlSpecial` handles psi abilities. `simControlTank`, `simControlVulture`, and `simGoliathControl` pilot the Siege Tank, the hover-bike, and the mech, each with its own physics model. `simControlZTarget` adds lock-on targeting. Mode switches happen based on gameplay state, not direct player input — the system figures out which mode you should be in.
 
 **Physics runs through Havok 2.1.0.** `simPhysics` manages the Havok world lifecycle — startup, per-level initialization with collision group setup, per-frame stepping, and shutdown. Nine collision groups separate the player body, player feet, projectiles, sensors, and AI actors. The physics step is clamped to prevent tunneling on frame drops, and deformable body simulation runs at a fixed sub-step rate. The Havok integration lives in `game/gamelib/havok/` with dedicated wrappers for collision filtering, mass adjustment, and shape caching.
 
@@ -179,13 +179,17 @@ The audio stack sits between `stdMixer` (the platform layer) and the game. `cVoi
 
 The effect system has a hard 250KB memory budget and a pool of 800 concurrent slots. `cEffectManager` prioritizes — particles and footprints get evicted when the budget runs out; psi shield hits and explosion flashes don't. Definitions come from `game.nfx`, a text block format with over 1100 entries and 144 controllers. The types are what you'd expect — particle systems, explosions, energy beams, psi effects, trails, motion blur, lightning arcs, heat shimmer, footprints. A recycled mesh pool handles debris without per-frame allocation, and a laser sight subsystem tracks Nova's targeting overlay.
 
-`cGameScript` isn't interpreted — it's compiled C++ exposing engine functionality through 20 domain-specific binding modules covering entities, AI, physics, world, cutscenes, sound, and system utilities. A timer pool handles delayed and recurring mission events. Script parameters are typed — integer, float, enum, string, boolean, reference — and loaded from `.nsd` scene files alongside entity data. No Lua, no bytecode, no hot-reloading. Every gameplay tweak means a full recompile.
+Video playback exists twice over. The engine links Bink for cutscenes, but a complete in-house DivX player — with asynchronous file streaming and its own audio synchronization — sits alongside it in `main/divx/`. Both paths survive in the build; the binary doesn't say why they kept two.
+
+`cGameScript` isn't interpreted — it's compiled C++ exposing engine functionality through 20 domain-specific binding modules covering entities, AI, physics, world, cutscenes, sound, and system utilities. A timer pool handles delayed and recurring mission events. Script parameters are typed — integer, float, enum, string, boolean, reference — and loaded from `.nsd` scene files alongside entity data. Since nothing is interpreted, nothing can be hot-reloaded; every gameplay tweak meant recompiling the game.
 
 ---
 
-## Twenty-Three Formats
+## The File Formats
 
-Every proprietary format starts with N. Nihilistic's naming convention is consistent to a fault — makes identifying their files trivial in a hex editor.
+Every proprietary format starts with N. Nihilistic's naming convention is consistent to a fault, which makes their files easy to spot in a hex editor.
+
+The formats also link to each other by name, forming a clean dependency graph: `.nil` sectors reference `.nsa` materials, `.nsa` materials reference `.dds` textures, `.nsd` scene entities reference `.not` templates, and templates supply the `.nod` model path. On the animation side, `.nms` motion sets map state names to `.nad` files, and each level's `.nlfx` manifest lists which `.nfx` effect controllers it uses. Once the convention clicks, you can trace an asset from level file to texture without leaving a text editor.
 
 | Extension | Type | Content |
 |---|---|---|
@@ -195,6 +199,7 @@ Every proprietary format starts with N. Nihilistic's naming convention is consis
 | `.nsd` | Binary | Scene data — entity positions, rotations, sector assignments, model refs |
 | `.not` | Binary | Entity templates — 1224 definitions in an eight-root inheritance tree |
 | `.nfx` | Text | Effect definitions — particle systems, energy beams, explosions |
+| `.nlfx` | Text | Level effect manifest — per-level list of `.nfx` controller names |
 | `.nsa` | Text | Shader archive — material properties in Quake 3 style syntax |
 | `.nob` | Binary | Asset archive — ZIP format with hashtable directory |
 | `.nmb` | Binary | Model bundle — multi-LOD model variants for level streaming |
@@ -213,21 +218,23 @@ Every proprietary format starts with N. Nihilistic's naming convention is consis
 | `.xpr` | Binary | Xbox packed textures — GPU-native format with D3D descriptors |
 | `.dds`/`.tga` | Binary | Standard texture formats (DXT1, DXT5, uncompressed) |
 
-**The VtMR SDK documents many of these formats.** The `.nod` model format went from version 7 in VtMR to version 10+ in Ghost, adding the six vertex types and bone palettes needed for Xbox hardware skinning. The original spec confirms the 64-bone limit per model, two-bone-maximum vertex weighting, and the Z-up / Y-forward coordinate system — all unchanged in Ghost. The `.nil` level format jumped from version 27 to version 35, gaining the Xbox-specific overbright vertex color encoding and lightmap patches that don't appear in the VtMR spec. The `.nad` animation format kept its cubic polynomial keyframes — each storing base value plus three coefficient vectors evaluated as $v + t \cdot b + t^2 \cdot c + t^3 \cdot d$ — but the VtMR docs reveal a detail the Ghost binary obscured: bone tracks carry a type field for rotation, translation, or scale, with scale listed as "currently not supported by the engine." Four years later, it still isn't.
+**The VtMR SDK documents many of these formats.** The `.nod` model format went from version 7 in VtMR to version 10+ in Ghost, adding the six vertex types and bone palettes needed for Xbox hardware skinning. The original spec confirms the 64-bone limit per model, two-bone-maximum vertex weighting, and the Z-up / Y-forward coordinate system — all unchanged in Ghost. The `.nil` level format jumped from version 27 to version 35, gaining lightmap patches and the Xbox overbright vertex color encoding — 128 encodes full intensity and 255 roughly doubles it, with the renderer dividing by 128 — neither of which appears in the VtMR spec. The `.nad` animation format kept its cubic polynomial keyframes — each storing base value plus three coefficient vectors evaluated as $v + t \cdot b + t^2 \cdot c + t^3 \cdot d$ — but the VtMR docs reveal a detail the Ghost binary obscured: bone tracks carry a type field for rotation, translation, or scale, with scale listed as "currently not supported by the engine." Four years later, it still isn't.
 
-**Some extensions were reused for different data.** In VtMR, `.npd` stood for Nihilistic Particle Definition — a text format defining emitter types like gas, fire, flame, liquid, and rain. In Ghost, the same extension means Nihilistic Patrol Data — a binary format for AI waypoint graphs with adjacency lists. Same three letters, completely different file. The particle system moved to `.nfx` (Nihilistic Effects), a text block format with over 1100 effect definitions and 144 controllers. Meanwhile, the cutscene system went from VtMR's conversation files (`.nco`) with branching dialogue trees driven by Java-based Codex scripts to Ghost's binary `.nce`/`.ncs` pairs encoding camera shots, actor animations, and sound cues — no scripting language, no branching, just linear cinematics.
+**Some extensions were reused for different data.** In VtMR, `.npd` stood for Nihilistic Particle Definition — a text format defining emitter types like gas, fire, flame, liquid, and rain. In Ghost, the same extension means Nihilistic Patrol Data — AI waypoint graphs for pathfinding. The waypoints don't even live in world space: they sit in a separate navigation-map coordinate system with the Z axis compressed to floor indices, and connectivity comes from an adjacency list with per-edge costs. Entity placement stayed in `.nsd`; `.npd` is pathfinding only. Same three letters, completely different file. The particle system moved to `.nfx` (Nihilistic Effects), a text block format with over 1100 effect definitions and 144 controllers. Meanwhile, the cutscene system went from VtMR's conversation files (`.nco`) with branching dialogue trees driven by Java-based Codex scripts to Ghost's binary `.nce`/`.ncs` pairs encoding camera shots, actor animations, and sound cues — no scripting language, no branching, just linear cinematics.
 
 **`.nil` levels remain partially undecoded.** After the sector geometry, a significant chunk of each file — anywhere from a tenth to nearly half — is still unstructured. The VtMR SDK documents the sector format in detail: sector-bounding planes, a per-sector BSP tree used only for collision (not rendering), separate vertex position and surface-vertex arrays, and per-surface material groups. Ghost's version extends this with portal connectivity, environment map references, and the Xbox overbright lighting — but the post-sector data that makes up the remainder of each file is absent from both the SDK and anything I've reconstructed so far.
 
+**The `.nsd` scene format leaks its own history.** Entities are stored as 36-byte tagged property slots — rotation, position, sector assignment, model reference — and the unused tail of each slot still contains leftover bytes from whatever string sat in the exporter's write buffer beforehand. Nobody zeroed the buffer between writes. It changes nothing at runtime, but every scene file carries little fragments of the tool that wrote it.
+
 **Bundles make streaming possible.** `.nmb`, `.nnb`, and `.nsb` pack models, animations, and sounds per level. Loading and freeing are both atomic per bundle — on 64MB of Xbox RAM, per-level atomic allocation is the only sane memory strategy.
 
-The VtMR SDK also documents formats Ghost doesn't use at all — `.ndd` for discipline definitions, `.ncd` for vampire clan data, `.ntt` for random treasure tables, `.nqd` for quest definitions, `.nco`/`.nvo` for conversation trees — the RPG scaffolding that was stripped when the engine pivoted to a console action game. Twenty-three formats survived into Ghost, all proprietary, and until the SDK surfaced, undocumented outside Nihilistic's walls.
+The VtMR SDK also documents formats Ghost doesn't use at all — `.ndd` for discipline definitions, `.ncd` for vampire clan data, `.ntt` for random treasure tables, `.nqd` for quest definitions, `.nco`/`.nvo` for conversation trees — the RPG scaffolding that was stripped when the engine pivoted to a console action game. More than twenty proprietary formats survived into Ghost, and until the SDK surfaced, every one of them was undocumented outside Nihilistic's walls.
 
 ---
 
 ## What's Next
 
-The architecture is documented. The formats are mapped. The simulation, audio, effects, and scripting layers are catalogued. The next question is what's actually inside the data.
+That covers the architecture — boot, foundation, renderer, entities, AI, simulation, audio, and the file formats tying them together. The next question is what's actually inside the data.
 
 That's Part 3: what the data says about the game they were trying to make.
 

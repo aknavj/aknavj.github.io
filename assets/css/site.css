@@ -24,7 +24,7 @@
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ---------- reset ---------- */
+/* reset */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { -webkit-text-size-adjust: 100%; scrollbar-width: thin; scrollbar-color: var(--faint) var(--bg); }
@@ -382,7 +382,7 @@ a { color: inherit; text-decoration: none; transition: color .25s var(--ease), o
     text-transform: uppercase;
 }
 
-/* ---------- lightbox ---------- */
+/* lightbox */
 .lightbox {
     position: fixed;
     inset: 0;
@@ -666,7 +666,7 @@ a { color: inherit; text-decoration: none; transition: color .25s var(--ease), o
 .table-wrap { overflow-x: auto; margin: 1.4em 0; }
 .table-wrap table { margin: 0; }
 
-/* ---------- rouge syntax (muted) ---------- */
+/* rouge syntax (muted) */
 .highlight .c, .highlight .c1, .highlight .cm, .highlight .cp, .highlight .cs { color: #6a6a74; font-style: italic; }
 .highlight .k, .highlight .kd, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .kt { color: #c9a2ff; }
 .highlight .s, .highlight .s1, .highlight .s2, .highlight .sb, .highlight .sc, .highlight .sd, .highlight .se, .highlight .sh, .highlight .si, .highlight .sx, .highlight .sr, .highlight .ss { color: #b7e08a; }
