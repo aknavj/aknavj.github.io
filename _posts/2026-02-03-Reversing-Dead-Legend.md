@@ -1,145 +1,116 @@
 ---
 layout: article
 title: "Reversing a Dead Legend: Inside StarCraft Ghost's NOD Engine - PART 1"
-description: "Reading the surviving StarCraft Ghost debug executable to understand NOD's architecture, its reuse from Vampire, and the limits of what a binary can explain."
+description: "Two years of spare-time investigation into StarCraft Ghost's development build, and the small architecture reconstruction that grew out of it."
 tags: reverse-engineering starcraft ghost nod-engine nihilistic disassembly
 categories: reverse-engineering
 ---
 
-In 2020, a *StarCraft: Ghost* development build surfaced with something particularly useful: a PC debug executable. The game did not run correctly, but enough names and diagnostic strings survived to make its engine readable.
+I wanted to know how *StarCraft: Ghost* had been built. Not how to finish it, port it, or replace its engine. Just how the thing worked.
 
-I spent two years studying it. What had Nihilistic carried over from its previous game, and what had changed to support Nova?
+The leaked development build offered an unusual starting point: alongside the Xbox prototype was a PC debug executable, `Star_d.exe`. It did not run correctly out of the box, but its disassembly and decompiled pseudo-code made parts of the engine's organization visible.
 
-This series records what I found. It is a reverse-engineering case study, not an engine-building tutorial. This part introduces NOD; [Part 2]({% post_url 2026-03-31-NOD-Engine-Architecture-Deep-Dive %}) follows a scene through its systems; [Part 3]({% post_url 2026-07-14-What-the-Data-Remembers-NOD-Engine-Part-3 %}) examines the surviving content.
-
----
-
-## The Build in Context
-
-StarCraft: Ghost was announced on September 19, 2002 — a third-person stealth-action game that would put you behind the eyes of Nova, a Terran ghost operative, instead of the god's-eye view of the RTS.
-
-The game was pitched to Blizzard by **Nihilistic Software**, a studio founded in 1998 by Ray Gresko, Robert Huebner, and Steve Tietze — LucasArts veterans who had shipped *Star Wars Jedi Knight: Dark Forces II*. Their first title as Nihilistic was *Vampire: The Masquerade — Redemption* (2000), built on a proprietary engine called **NOD**. When the Ghost contract came in, they brought that engine along.
-
-What followed has been well-documented. [Polygon's exposé](http://www.polygon.com/2016/7/5/11819438/starcraft-ghost-what-went-wrong) and Jason Schreier's *Play Nice* cover it in detail. The short version:
-
-- **2001** — Development begins. Monthly cheques from Blizzard, no fixed deadline.
-- **2002** — Playable build at Tokyo Game Show. Blizzard keeps adding features. *Splinter Cell* ships, and comparisons to it start dominating every feedback session.
-- **2003–2004** — Levels feel cobbled together from different games. Story rewritten multiple times. Nihilistic is looking for an exit.
-- **Mid-2004** — Nihilistic ceases work. Blizzard hands the project to **Swingin' Ape Studios**.
-- **2005** — Blizzard acquires Swingin' Ape. The BlizzCon demo looks promising — but *World of Warcraft* has launched and is absorbing every available resource.
-- **2006** — Indefinitely postponed. Xbox 360 and PS3 are arriving. Ghost targets Xbox, PS2, and GameCube — already obsolete hardware.
-- **2014** — Mike Morhaime quietly uses the word "cancelled."
-
-In February 2020, a build from Nihilistic's era leaked online: a functional Xbox prototype and a broken PC debug executable (`Star_d.exe`), with working levels, models, and character data — debug symbols still partially intact. Because it's a development build, every model, texture, map, and template sits unpacked on disk as loose files instead of bundled `.nob` archives, so nothing needs to be extracted before you can start reading it.
-
-The material examined here covers the Xbox prototype and the PC D3D8 path. PS2 and GameCube versions were reportedly in development, but those implementations are not available in this snapshot.
+That was enough to keep me coming back for about two years.
 
 ---
 
-## Why I Looked Inside
+## The Game Behind the Binary
 
-I started **Starev** — my reverse engineering effort on the NOD engine, currently private and under development — about two years after the leak. The goal was never to resurrect the game or to ship anything. I wanted to understand how an early-2000s game engine was put together. The binary could show me its implementation, but not explain the project's collapse on its own.
+Ghost was announced in September 2002 as a third-person stealth-action game featuring Nova, a Terran ghost operative. Its original developer, Nihilistic Software, brought forward the **NOD engine** used in *Vampire: The Masquerade - Redemption*.
 
-The NOD engine was built between 1998 and 2000 for a PC RPG, then adapted during 2001–2004 for a multi-platform console action game. The codebase reflects that journey: C-style foundations alongside C++ class hierarchies. If you've read through the [Rebellion AVP source code](https://github.com/aknavj/avp), you'll recognize the mixture of low-level functions and object-oriented systems.
+Nihilistic's work ended in 2004, and development moved to Swingin' Ape Studios. Blizzard later acquired that studio. The game was indefinitely postponed in 2006 and eventually acknowledged as cancelled.
 
-Nihilistic's founders had shipped *Jedi Knight* at LucasArts. Carrying their own engine forward gave them an existing renderer, resource system, and tools. The interesting question is not whether reuse was wrong, but which parts transferred well and which needed adaptation.
+The build that surfaced in 2020 belongs to the Nihilistic period. It is not a record of everything the later team did. The surviving Xbox prototype and PC executable give us a view of one stage of development, not the final state of the project.
 
-There was a personal reason too. In 2004, the E3 trailer persuaded me to start saving for a PS2. Some of my early graphics experiments tried to recreate Ghost's environments. Sixteen years later, I could finally study the implementation behind them.
+The production history is covered elsewhere, notably in [Polygon's retrospective](https://www.polygon.com/2016/7/5/11819438/starcraft-ghost-what-went-wrong). My interest here is narrower: what can be learned by reading this particular implementation?
 
 ---
 
-## The Binary
+## Two Years, in Spare Time
 
-`Star_d.exe` is a Win32 debug executable. Its surviving names and diagnostics give routines recognizable roles. With less optimization than a release build, the code is also easier to follow. Neither advantage recovers the original source, but both reduce the amount of guesswork.
+Those two years were not a full-time reverse-engineering job. There was no schedule, milestone plan, or clear destination. I studied the disassembly and pseudo-code in my free time, out of curiosity.
 
-Debug strings throughout the binary reveal the original source tree at `C:\star\Code\`. The engine is layered cleanly:
+I started over numerous times. Each attempt made some part of the layout easier to recognize, but it was easy to lose direction when every call led into another unfamiliar system.
 
-```
-+------------------------------------------------------------+
-|  gamescript/   Mission-specific logic (per-level scripts)   |
-+------------------------------------------------------------+
-|  game/                                                      |
-|  +- main/      Entry point, state machine, saves, video     |
-|  |  +- divx/   DivX video playback subsystem                |
-|  +- gamelib/   Entity model, templates, scenes, worlds      |
-|  |  +- havok/  Havok physics wrappers & collision filters   |
-|  +- ai/        40+ AI class types with base class layer     |
-|  +- sim/       Physics, camera, 6 control modes, ragdoll    |
-|  +- effect/    30+ effect types                             |
-|  +- script/    Script API, 20 domain-specific bindings      |
-|  +- shell/     Menu system (cShell + widget modules)        |
-|  +- ui/        In-game HUD (18 vui components)              |
-|  +- world/     World rendering, lighting, debug viz         |
-+------------------------------------------------------------+
-|  render/       Model/keyframe/terrain/camera/font/mesh      |
-|  +- direct/    D3D8 backend + shader class factory          |
-+------------------------------------------------------------+
-|  misc/         Audio classes: cSound, cVoice, cStream       |
-+------------------------------------------------------------+
-|  math/         Vectors, matrices, trig (SSE), intersection  |
-+------------------------------------------------------------+
-|  std/          Foundation: memory, files, NOB archives,     |
-|                hashtable, input, audio mixer, timing, debug |
-+------------------------------------------------------------+
+Eventually I had enough of restarting. I continued in smaller steps instead: map the basic layout, follow the entry point, identify the main loop, and reconstruct the first few layers around it.
+
+That work became **Starev**. The name describes a reconstruction effort, not a recovered copy of Nihilistic's source code.
+
+There was a personal reason for choosing Ghost. In 2004, its E3 trailer persuaded me to start saving for a PS2. Some of my early graphics experiments tried to recreate its environments. Years later, I finally had a chance to inspect the real implementation.
+
+---
+
+## What the Debug Build Gave Me
+
+The useful material was not just executable instructions. Function names, diagnostic strings, source paths, and recognizable library calls helped put those instructions into context.
+
+A source path can suggest which module owns a routine. A startup call can reveal a dependency. Repeated references to the same object can help identify who coordinates its lifetime.
+
+Pseudo-code makes these relationships easier to read, but it is still a decompiler's interpretation. Types, ownership, and control flow need checking against the disassembly. Turning that output into readable C++ is not the same as recovering the original code.
+
+The PC executable was particularly helpful for identifying Win32 entry points and the Direct3D 8 path. Those details describe the PC side of the build; they should not be mistaken for the Xbox platform implementation.
+
+---
+
+## Finding the Outline
+
+Rather than understand every function, I needed a map that told me where to look next.
+
+The broad outline was:
+
+```text
+Platform entry and window handling
+  -> Application sequence and state
+      -> Input, timing, and other foundation services
+      -> Rendering and resource interfaces
+      -> Menu and UI
+      -> Game, simulation, and mission-system boundaries
 ```
 
-The same patterns show up everywhere: `stdHashtable` for resource lookup, reference counting with free lists, and bundled archives (`.nmb`, `.nnb`, `.nsb`) for level-atomic asset streaming. The config parser still reads `masquerade.ini` — a filename inherited from *Vampire: The Masquerade — Redemption*. Nobody ever renamed it; the vampire game's config file lives on inside *StarCraft Ghost*.
+The important discovery was the role of `tSequence`. It gave me a place to follow startup and the calls made during a frame. From there, the lower-level services and higher-level game systems stopped looking like unrelated groups of functions.
 
-The layering itself is not evidence of a design failure. The rest of this series looks inside those subsystems to understand how this particular implementation worked.
-
----
-
-## Four Connections Worth Following
-
-The source-tree outline is a useful map. The relationships inside it are more interesting.
-
-**Materials select rendering behavior.** Glass, lava, cloak, and Nova's suit have dedicated shader classes. Here, "shader class" means engine-side code configuring a rendering path, not necessarily one GPU program. Materials also carry surface-sound information, connecting a surface's appearance with the footsteps it should produce.
-
-The world is sector-based. Each sector carries its own geometry, portal links to neighbors, and surface groups tied to shaders. Streaming, visibility, and collision all operate at sector granularity — a classic portal-based partition, not unlike Quake's BSP leaves, but with Nihilistic's own level format and tooling behind it.
-
-**Entities connect resources to gameplay.** The central entity type, `tThing`, carries an identifier, a transform, a sector link, and physics hooks. Objects, actors, props, and projectiles extend it. Templates supply properties; scene files supply placement; AI supplies behavior. A model becomes a gameplay object through those connections.
-
-**Player control is specialized.** Movement, aiming, acrobatics, psi abilities, and vehicles have their own control paths. These are not generic resource-loading concerns. They show where Ghost's specific requirements meet the shared engine.
-
-**Mission logic calls into those systems.** `cGameScript` exposes functionality through 20 domain-specific binding modules. Its mission routines are compiled C++. Changing that code requires a rebuild; changing a data-driven parameter is a different matter. The binary reveals the runtime interface more clearly than the complete authoring workflow.
-
-The surviving assets use Nihilistic's proprietary formats (`.nod`, `.nad`, `.nsd`, `.not`, ...). They reveal a distinct content pipeline, but not enough to reconstruct how the two studios exchanged work.
+This was a map of responsibilities, not proof that the whole engine had been reconstructed.
 
 ---
 
-## What This Build Cannot Tell Us
+## What I Actually Reconstructed
 
-The surviving build contains a D3D8 rendering backend, platform-specific modules, and an old Havok integration. A move to different hardware would require work in those areas. That does not tell me how much of the engine could have been retained, or whether a port would have been commercially worthwhile.
+The practical result was a basic engine architecture skeleton: the entry path, main-loop organization, and the first two or three layers of calls around them.
 
-More importantly, this is a Nihilistic-era snapshot, not the final state of the later Swingin' Ape project. It cannot establish why the whole game was cancelled. The production histories provide context; the disassembly answers narrower implementation questions.
+Foundation code and the interfaces between modules gave that skeleton structure. Other files existed to record a boundary or a declaration while their implementation remained incomplete.
 
----
+I did **not** deeply reconstruct physics, AI, the game library, or mission scripting. I followed those systems along the surface where the main flow called into them. Knowing where an AI update is dispatched is different from understanding how its behavior works internally.
 
-## What I Took Away
-
-**An engine used for an RPG is not inherently unsuitable for an action game.** Resource loading, rendering, entity placement, and many other systems can serve both. Reuse becomes costly when a concrete assumption no longer fits the new requirements and changing it affects several connected systems.
-
-When I discuss technical debt here, I mean the maintenance and adaptation costs of this particular implementation, not a rule against cross-genre engines. Legacy format compatibility, platform-specific rendering, and rebuilding compiled mission logic are places to examine those costs. None of them, alone, proves that NOD prevented Ghost from shipping.
-
-For someone building a genre-agnostic engine, the useful question is which assumptions belong in shared infrastructure and which belong in the game. A reusable resource loader does not need to know whether the player is a vampire or a ghost operative. A player controller necessarily knows much more about the game it serves. That distinction is a design consideration, not a blueprint recovered from this binary.
-
-I admire the developers' work. NOD is a useful snapshot of early-2000s engine development: explicit memory budgets, custom tools, and systems adapted as a project changed. My aim is to understand those choices without turning hindsight into certainty.
-
-That's why I reverse engineer dead games: to learn from them, and to make sure the knowledge doesn't disappear.
+That distinction matters when reading the rest of the series. Starev was a way to organize and preserve what I understood. It was not a functioning replacement engine or a finished PC version of Ghost.
 
 ---
 
-## What's Next
+## What Reuse Does, and Does Not, Tell Us
 
-[Part 2]({% post_url 2026-03-31-NOD-Engine-Architecture-Deep-Dive %}) follows the engine from startup to a running scene: loading resources, constructing entities, updating gameplay, and drawing the world. It explains the relationships I recovered, rather than walking through an engine implementation or a disassembly tutorial.
+NOD's earlier use in an RPG explains some of its history. It does not establish that its architecture was unsuitable for an action game.
+
+Rendering, file access, resource lookup, and timing can serve many kinds of games. Player movement and mission behavior are much more specific. The interesting question is where those responsibilities meet, and which assumptions have to change when the game changes.
+
+My surface-level reconstruction was not enough to measure the cost of that adaptation. An inherited filename or an old interface is a trace of history, not evidence that engine reuse caused Ghost's cancellation.
+
+For someone interested in a genre-agnostic engine, this work offers an example to inspect, not a design recipe. The useful distinction is between shared services and game-specific behavior, rather than between an "RPG engine" and an "action engine."
+
+---
+
+## The Next Step
+
+Once I had an outline, the next question was how to turn it into a coherent reconstruction without pretending to understand everything below it.
+
+[Part 2]({% post_url 2026-03-31-NOD-Engine-Architecture-Deep-Dive %}) follows that work through Starev: the application boundary, staged startup, main-loop dispatch, and the subsystem interfaces left to reconstruct.
+
+[Part 3]({% post_url 2026-07-14-What-the-Data-Remembers-NOD-Engine-Part-3 %}) takes a smaller, testable piece of the problem: reading the custom asset formats in a viewer.
+
+These are accounts of an investigation, not step-by-step tutorials.
 
 ---
 
 ## References
 
-- [StarCraft: Ghost — What Went Wrong](http://www.polygon.com/2016/7/5/11819438/starcraft-ghost-what-went-wrong), Polygon, July 2016
-- [Why Was StarCraft: Ghost Cancelled](https://www.rockpapershotgun.com/why-was-starcraft-ghost-cancelled), Rock Paper Shotgun, July 2016
-- [StarCraft: Ghost](https://starcraft.fandom.com/wiki/StarCraft:_Ghost), StarCraft Wiki
-- [NStigate Games (Nihilistic Software)](https://en.wikipedia.org/wiki/NStigate_Games), Wikipedia
+- [StarCraft: Ghost - What Went Wrong](https://www.polygon.com/2016/7/5/11819438/starcraft-ghost-what-went-wrong), Polygon, July 2016
 - Jason Schreier, *Play Nice: The Rise, Fall, and Future of Blizzard Entertainment*, Grand Central Publishing, 2024
-- Starev — StarCraft Ghost Reversed *(private, under development)*
+- Starev - architecture and code-reconstruction work based on the development executable

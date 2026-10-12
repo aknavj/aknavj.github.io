@@ -14,11 +14,13 @@ XboxRecomp offered a way to try it: translate the Xbox executable into code comp
 
 ## One Last Shot
 
-The [earlier investigation]({% post_url 2026-07-14-What-the-Data-Remembers-NOD-Engine-Part-3 %}) had left me with a partial engine reconstruction and an asset viewer, OpenNOD SDK. A few days before this attempt, I came across **XboxRecomp**, a project bringing original Xbox titles to modern platforms. It gave me a different way to use what I had learned.
+The [earlier investigation]({% post_url 2026-07-14-What-the-Data-Remembers-NOD-Engine-Part-3 %}) had left me with Starev's architecture skeleton and an asset viewer, OpenNOD SDK. Neither was a reconstructed runtime capable of playing Ghost.
+
+Later, I came across **XboxRecomp**, a fresh project bringing original Xbox titles to modern platforms. Its existence was the spark: it looked worth trying as a wild experiment, using what I had learned without waiting for a manual source reconstruction to be complete.
 
 This time, the result I wanted was a running game, not a reconstruction of what its files described.
 
-I opened IDA again and returned to my notes from earlier unsuccessful attempts. The scope was the existing Xbox prototype running as a native Windows executable, not finishing the cancelled game.
+I returned to IDA and the notes from my earlier architecture and file-format work. This was my first XboxRecomp approach, growing naturally from those investigations rather than another retry of the same port. The scope was the existing Xbox prototype running as a native Windows executable, not finishing the cancelled game.
 
 It was also a chance to test XboxRecomp's capabilities and push my own boundaries with recompilation. My usual area of expertise is elsewhere, so digging into emulation and the low-level mechanics behind this runtime was a learning process, not familiar ground. That made each working piece especially rewarding.
 
@@ -57,6 +59,8 @@ Intro movies -> Splash -> Main menu -> Level loading
 
 Every arrow is another place where the game can wait for hardware, reach an undiscovered callback, or submit something the renderer does not understand. Getting through boot was not the same as getting through any of those transitions.
 
+The intro had a separate presentation path: the game decoded the video and packed it as YUY2, a format storing brightness and shared color information, then programmed the NV2A's PVIDEO overlay. Capturing the draw surface before that overlay was composited produced a black image even when the window showed video. The runtime needed to read the live overlay registers and composite the guest-decoded frame. A black intermediate buffer was not proof that decoding had failed.
+
 ---
 
 ## The Missing Menu Scene
@@ -79,6 +83,8 @@ Comparison -> Status flags -> LAHF -> Branch -> Camera matrix
 
 Repairing one set of floating-point comparisons brought Nova and the room back. Repairing the other put the camera the right way up.
 
+Those were two different instruction paths: SSE comparisons and x87 comparisons that transfer their results into the CPU flags. Before the repair, the camera matrix was already wrong when it reached D3D11, giving scene geometry a negative homogeneous `W` value. That value participates in clipping and perspective division, so valid draw submissions could still leave the scene missing. This was why counting successful draws did not locate the fault.
+
 Changing the renderer's projection matrix would have treated the symptom. Repairing the flag handling let the original camera code choose the intended branch.
 
 ---
@@ -87,7 +93,11 @@ Changing the renderer's projection matrix would have treated the symptom. Repair
 
 Input had its own version of the same problem. Mapping XInput buttons was only part of it: several original Xbox USB controller callbacks had not been discovered during translation. Recovering those routines and fixing transfer completion handling got the original input path moving. The physical Xbox One controller now works well, although its face buttons cannot reproduce the pressure-sensitive buttons of the original Xbox controller.
 
+Recovering the callbacks also changed allocation order and exposed an audio assumption: a diagnostic DSP acknowledgement used a fixed guest address for its command mailbox. The correct location came from the programmed scratch-memory mapping, not a constant that happened to work earlier. Resolving that mapping fixed the initialization wait. It was still an acknowledgement passthrough, not execution of the Xbox's audio DSP.
+
 Level loading exposed more missing pieces. A broken translation of `memmove` produced an access violation. An audio command acknowledgement could leave loading stuck. Once those were repaired, the renderer reached line and point submissions it did not yet support.
+
+The copy failure began in instruction discovery. Resynchronizing after a switch table had left supposed instruction starts inside other decoded instructions. The repair removed those overlapping starts and regenerated the affected copy routine, rather than replacing it with a workaround for this level.
 
 These were separate dependencies in the loading path, not one renderer bug. Repairing them let execution reach the next unsupported operation.
 
@@ -100,6 +110,8 @@ The intro became audible, but gameplay effects were still largely absent. The Wi
 The missing gameplay cues came down to another translation error: a state transition used an unassigned comparison result and rejected the requested starts. Restoring the original transition rules brought gameplay sounds back.
 
 A separate register-access bug explained some of the broken streaming. A native 64-bit access covered two adjacent Xbox audio registers, but the device bridge handled only the first half. Reading and writing both halves improved the sound considerably.
+
+The access width was part of the device behavior, not just a C type detail. Both adjacent 32-bit registers needed their own operation, and paired writes needed to hold the audio-device lock across both. Otherwise the audio worker could observe a half-updated pair even after the missing second write was restored.
 
 **Audible does not mean finished.** Occasional crackles remain, and the Xbox audio DSP effects are not fully implemented. A continuously fed Windows audio queue is not proof of a correct soundtrack.
 
@@ -207,7 +219,7 @@ As of October 4, the result is:
 
 That is the honest state of it. This is a working recompilation effort, not a finished PC port, and certainly not a completed *StarCraft Ghost*. The game data is still required separately; none of this makes Blizzard's assets mine to redistribute.
 
-When I started the earlier articles, I wanted to understand what Nihilistic had built. This last attempt let me follow that understanding all the way from an instruction in IDA to Nova standing in a room on my screen.
+When I began studying the binary, I just wanted to understand how Nihilistic had built it. The architecture skeleton and viewer each made part of that understanding tangible. Recompilation took a different route and finally brought the original gameplay into the experiment.
 
 There are more things to fix. There always will be.
 

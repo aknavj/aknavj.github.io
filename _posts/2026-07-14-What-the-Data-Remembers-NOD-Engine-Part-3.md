@@ -1,172 +1,155 @@
 ---
 layout: article
 title: "Reversing a Dead Legend: Inside StarCraft Ghost's NOD Engine - PART 3"
-description: "Using an asset viewer to examine the surviving StarCraft Ghost content, separating what the files contain from what they suggest about the unfinished game."
+description: "Building OpenNOD SDK to test the understanding of Ghost's custom file formats and make the data accessible without reconstructing the entire engine."
 tags: reverse-engineering starcraft ghost nod-engine nihilistic asset-formats tooling
 categories: reverse-engineering
 ---
 
-The binary contains mission names with no matching level in the asset tree. The asset tree contains animations with no matching mission script. I wanted to understand what those mismatches meant.
+Reconstructing the source structure gave me a map of the engine. It did not give me a quick way to check whether I understood the files the engine loaded.
+
+A viewer was a smaller target. If I could read a model, display its texture, and place it in a level, I could test part of that understanding without first rebuilding the game.
 
 ---
 
-## From Engine Code to Game Content
+## From Reconstruction to a Testable Tool
 
-[Part 1]({% post_url 2026-02-03-Reversing-Dead-Legend %}) introduced the investigation. [Part 2]({% post_url 2026-03-31-NOD-Engine-Architecture-Deep-Dive %}) followed how NOD loads and runs a scene. This final part of the original series looks at the other side of that process: the files available to load.
+[Part 2]({% post_url 2026-03-31-NOD-Engine-Architecture-Deep-Dive %}) described Starev's architecture skeleton. Completing the systems beneath it would be a large task, and a mistake in a file loader could remain hidden behind many unrelated failures.
 
-The first step was to stop reading files one at a time and see which ones connected.
-
-This is an account of inspecting one development snapshot, not a tutorial for writing asset parsers or reconstructing an engine. **Missing from this build does not mean never created**, and present in this build does not mean complete.
-
----
-
-## Building a Way to Look
-
-The asset tree contains 7,535 files across more than twenty formats. A hex editor is useful for finding a version field or a record boundary. It cannot show whether a model is correctly placed in a canyon.
-
-I built a C++17 parser library, an OpenGL asset browser with an ImGui interface, and a Blender 4.x import plugin for several geometry and animation formats.
-
-In the indexed snapshot, 6,811 of the 7,535 files parse cleanly. The remainder includes placeholder stubs and files with undecoded regions. This measures parser coverage, not how much of the game was finished.
-
-![Asset browser rendering the Mar Sara canyon level](/assets/img/posts/scg_img0.png)
-**Figure 1.** The browser combines `1_2_1_Miners_Bunker.nil` geometry with entity placement from its paired `.nsd` scene file.
-
-The most valuable step was connecting files, not opening more of them in isolation:
+I wanted a shorter feedback loop:
 
 ```text
-Scene placement -> Entity template -> Model
-Level geometry  -> Material        -> Texture
+Study a loader and its data
+  -> Implement an independent parser
+  -> Inspect the decoded structure
+  -> Display the result
+  -> Revisit the interpretation when it disagrees
 ```
 
-Those relationships let the browser assemble an environment with objects and materials. They do not recreate AI, physics, or mission execution. **An asset viewer showing a level is not the game running.**
+That became **OpenNOD SDK**, in the `nodsdk-scghost` project. Its immediate purpose is to inspect the data, not execute Ghost's gameplay.
+
+The viewer gives practical evidence for individual parts of the reconstruction. It is not proof that the whole architecture is correct, but it makes specific mistakes easier to find.
 
 ---
 
-## What Is in the Snapshot?
+## Keep Parsing Separate from Presentation
 
-The inventory gives a sense of its breadth:
+The project has three main pieces:
 
-| Asset category | Files |
+| Component | Purpose |
 |---|---|
-| Models (`.nod`, `.nmb`) | 1,861 |
-| Animations (`.nad`, `.nnb`) | 1,595 |
-| Materials and textures (`.nsa`, `.dds`) | 1,100+ |
-| UI layouts (`.nui`) | 298 |
-| Cutscene files (`.nce`, `.ncs`) | 424 |
-| Video (`.bik`, DivX) | 93 |
+| C++17 parser library | Read asset structures without requiring the original runtime |
+| OpenGL viewer with an ImGui interface | Browse files, inspect fields, and preview supported content |
+| Blender import plugin | Bring supported models, levels, and animations into another tool |
 
-These are file counts, not counts of unique, finished assets. Bundles, variants, shared resources, and placeholders make a direct comparison misleading. The two cutscene formats also describe related parts of cinematics; 424 files does not mean 424 separate scenes.
+Separating the parsers from the viewer matters. The interpretation of a model file should not depend on the browser panel that displays it. The same understanding can support inspection, conversion, or another community tool.
 
-The level data represents three main locations, plus the menu backdrop:
-
-- `1_2_1_Miners_Bunker` — the Mar Sara canyon.
-- `1_3_1_Hive_StationOuter`.
-- `2_2_2_THREAT_BASEUPPER`.
-
-Some locations have lettered sections, so three locations should not be read as exactly three geometry files. Their associated files separate geometry (`.nil`), placement (`.nsd`), and navigation (`.npd`), sometimes with an effect manifest alongside them.
-
-The contrast is worth investigating: a broad resource library accompanies a relatively small set of environments. It does not establish how far the entire production had progressed.
+The browser also gives access to more than images. Some files are better understood as lists of tracks, material properties, scene records, or audio entries.
 
 ---
 
-## Looking at Mar Sara
+## Start with Something You Can See
 
-The Mar Sara canyon is a useful example because both its environment and its placement data survive.
+A model is a useful test because a wrong interpretation often leaves a visible result. Mesh layout, material assignment, skeleton information, and coordinate conventions all affect what appears on screen.
 
-The geometry includes rock walls, gantry bridges, mining machinery, and Zerg growths. A settlement sign reads *MAR SARA — POPULATION: 68*, with the number crossed out. These details give the location a clear identity even before gameplay runs.
+Textures provide another check. The viewer supports DDS and TGA images as well as Xbox packed texture resources. Showing the decoded image makes errors easier to recognize than reading header values alone.
 
-The paired scene data adds the player start, corpse props, ammunition containers, scripted animation anchors, and vehicles used as scenery or in set pieces. A model of a footlocker is just a resource; a placed footlocker with a particular template becomes part of the scene's gameplay setup.
+But a plausible preview is not enough by itself. An interpretation still needs to agree with the record layout and work across more than one example. The display supplements the structural inspection; it does not replace it.
 
-That is stronger evidence than an inventory alone. Geometry and placement show that this location was being assembled for a mission, not merely stored as disconnected art.
-
-It still does not prove that all objectives, transitions, or encounters are complete. Those depend on runtime behavior that the viewer does not execute.
+This is why the inspector and preview belong together. One shows what the parser read. The other shows what those values mean when used.
 
 ---
 
-## Looking for the Other Missions
+## A Level Tests the Connections
 
-Mission-related C++ module names survive in the binary's debug strings. Several match the level filenames:
+The next useful test is not a larger model. It is a group of files that depend on one another.
 
-| Script name | Corresponding location |
-|---|---|
-| `m121_script` | `1_2_1_Miners_Bunker` |
-| `m131_script` | `1_3_1_Hive_StationOuter` |
-| `m222_script` | `2_2_2_THREAT_BASEUPPER` |
+Level geometry describes the environment. Materials refer to textures. Scene data describes placements and entity types. Models supply visible objects.
 
-That correspondence supports reading the digits as act, mission, and area identifiers. Other names extend across prefixes 1 through 4, suggesting a campaign structure broader than the included locations.
+```text
+Level geometry -> Material properties -> Texture
+Scene records  -> Entity/model resolution -> Placed object
+```
 
-Some names are more specific: `m232_goliathmain`, `m423_lurkermain`, and `m441_brainmain` associate script code with named boss encounters. They are clues about intended content, not proof of a finalized boss order or a complete campaign.
+![Asset browser rendering the Mar Sara canyon level](/assets/img/posts/scg_img0.png)
+**Figure 1.** The Mar Sara environment displayed outside the original engine.
 
-`TGS222_script` suggests a separate presentation path for the `2_2_2` location, consistent with a trade-show variant. `testsiegetank` points to a development test path. Neither should be counted as an additional finished campaign mission just because it has a script name.
+Bringing these pieces together tests more than whether each file opens. It tests whether references, transforms, and material relationships have been interpreted consistently.
 
-The module list is therefore a map of code to investigate, not a campaign completion percentage. A mission needs more than a named routine: it needs an environment, resources, and working connections between them.
+The Mar Sara canyon is a useful example: terrain and structures provide a recognizable environment, while placed objects give positions and orientations something concrete to match against.
+
+The current viewer uses entity-type resolution to find models it knows how to place. That is not the same as reproducing the game's complete template and entity-construction path. Unresolved references and non-visual records remain useful information in the inspector.
+
+In particular, a scene record can describe a script target or a trigger rather than something with a model. An inspector should make that distinction visible instead of treating every record as missing geometry.
 
 ---
 
-## A Cinematic Without Its Level
+## Animation Needs More Than a File Name
 
-The animation directory contains a group prefixed `1_1_g_`, despite there being no matching mission 1-1 level or script in this snapshot.
+An animation inspector exposes duration, bone-track information, and the keys associated with each track. Those fields let me compare the parser's output with the structure inferred from the loader.
 
 ![NAD animation inspector showing 1_1_g_Nova.nad](/assets/img/posts/scg_img2.png)
-**Figure 2.** The inspector reads 28 bone tracks and 3,950 frames from `1_1_g_Nova.nad`.
+**Figure 2.** Inspecting Nova's animation tracks rather than treating the clip as an opaque file.
 
-The group includes Nova, a camera track, an Artemis, a Goliath, a Hauler, and twenty numbered marines. Five marines also have short `dead` variants. Taken together, these files suggest a substantial choreographed sequence.
+Previewing supported animation adds another check: tracks need to correspond to the intended skeleton, and their values need to produce meaningful motion.
 
-My interpretation is that they may belong to an opening cinematic. The shared prefix and camera track support that reading, but do not establish the intended placement or explain why the corresponding level is absent. Content could have been omitted, renamed, superseded, or left unfinished.
+The Blender plugin provides a separate route into that data. It imports supported model and level formats, and imports NAD animation onto an active armature. That is useful for inspection in a familiar authoring environment, without requiring the original editor.
 
-The tree also includes empty files such as the 12-byte `1_1_1a_War_Dropship.nnb` animation bundle. A header-only bundle is evidence that no animation content is stored in that file. It is not enough to recover the export history or production schedule behind it.
-
-The useful finding is the mismatch itself: animation can survive without the environment or mission that would give it context.
+It does not reconstruct a complete cinematic. Actor animation is only one part of a sequence that can also require camera data, events, sound, and runtime behavior.
 
 ---
 
-## Checking Against Audio
+## Not Every Useful Preview Is 3D
 
-The Xbox audio data includes XACT wave banks (`.xwb`) and associated cue banks (`.xsb`). Waves hold sound data; cues describe how playback is addressed.
+Scene inspection shows entity types and placement data. Material inspection exposes properties and resource names. Cutscene inspection can expose actor and event records without pretending to play the finished scene.
 
-The `1_2_1` wave bank is 18.6MB and contains 71 waves. The inspected banks use PCM, Xbox ADPCM, and WMA, reflecting different storage and playback needs.
+Audio banks benefit from the same approach. Listing entries and playing supported waves makes their organization easier to understand. Decoding a wave is separate from reproducing the game's cue handling, mixing, and effects.
 
-The mission-specific bank names align with the three included locations: `1_2_1`, `1_3_1`, and `2_2_2`. There are also banks for individual weapons and props.
-
-Audio gives us an independent check: the same three location identifiers appear in geometry, scripts, and mission-specific banks. That is a stronger connection than a script name alone, although it still says nothing about banks absent from this snapshot.
+This is the broader purpose of the browser: give each format a view that makes its structure understandable. A table can be as useful as a rendered mesh.
 
 ---
 
-## What the Evidence Supports
+## What the Viewer Proves
 
-The findings are easier to follow when observation and interpretation stay separate:
+The project documents format relationships and implements parsers, but support is not uniform. Reading a header, decoding a useful subset, and reproducing every field are different levels of understanding.
 
-| Observation | What it supports | What it does not establish |
-|---|---|---|
-| Thousands of resource files survive | A broad content library existed | That every asset was finished |
-| Three main level locations have related scene data | Those environments were assembled beyond isolated geometry | That every mission in them is complete |
-| Script names extend beyond the included levels | The code reflects a larger intended structure | A finalized campaign or completion percentage |
-| Mission 1-1 animation has no matching level here | Content survives without its full context | Why that context is missing |
-| Audio banks match the included locations | Supporting sound data exists for those locations | The state of all audio production |
+Likewise, displaying a scene is not running the game. The viewer does not recreate AI, physics, objectives, or mission scripting.
 
-My reading is that this build preserves both playable work and traces of a wider plan. The viewer makes that distinction easier to see, but it cannot turn a partial snapshot into a complete production history.
+What it does provide is a way to test the boundary between stored data and the systems that consume it. If the same assumptions produce sensible geometry, references, and placements across files, they become more credible. When the result disagrees, there is a smaller problem to investigate than an entire reconstructed engine.
 
-It cannot assign responsibility for the cancellation, clear a department of every production problem, or establish what existed at the later handover to Swingin' Ape. Those would require evidence beyond these files.
+The earlier NOD SDK for *Vampire* helps as a comparison, but Ghost's formats must be checked against this build. Similar names do not guarantee identical layouts or behavior.
 
 ---
 
-## Where I Left It
+## A Foundation for Community Tools
 
-The result is a working inspection toolchain and a clearer map of how the surviving content connects. It is not a recovered game engine or a completed version of Ghost.
+The longer-term value is not limited to viewing Ghost's assets. Documented formats and reusable parsers could support future modding work or help bring back parts of the NOD SDK toolchain for community development.
 
-There are still undecoded regions in the level files and unfinished work on cutscene event data. Reassembling a cinematic outside the original runtime would be another investigation, not an automatic consequence of having its animations.
+An inspector and importer are steps toward that goal, not a finished replacement for the original tools. Editing, exporting, and validating content for the runtime require more work.
 
-This was where the original three-part investigation paused. I later returned with a different goal: [getting the Xbox prototype running through XboxRecomp]({% post_url 2026-10-10-Nova-signing-off %}). That later effort deals with runtime behavior; this one explains what I could learn by reading and viewing the assets.
+Still, making the data readable is a useful beginning. It lets someone investigate a scene or animation without repeating every step of the original disassembly effort.
 
-The distinction matters throughout the series: understanding the architecture, inspecting the content, and running the game are related efforts, but they are not the same result.
+The tools also remain separate from the proprietary game data. Understanding a format does not confer permission to redistribute the assets stored in it.
 
 ---
 
-## References
+## The Progression So Far
 
-- [StarCraft: Ghost — What Went Wrong](http://www.polygon.com/2016/7/5/11819438/starcraft-ghost-what-went-wrong), Polygon, July 2016
-- [StarCraft: Ghost](https://starcraft.fandom.com/wiki/StarCraft:_Ghost), StarCraft Wiki
-- Jason Schreier, *Play Nice: The Rise, Fall, and Future of Blizzard Entertainment*, Grand Central Publishing, 2024
-- NOD Engine SDK v1.0, Nihilistic Software, 2000 — file format specifications and authoring tools
-- OpenNOD SDK — SC:Ghost Reversed *(asset parsers, viewer, Blender plugin — private, under development)*
-- Starev — StarCraft Ghost Reversed *(private, under development)*
+The work had moved from curiosity to an architecture skeleton, then to a viewer that could test parts of the file-format understanding:
+
+```text
+Read the binary -> Map the architecture -> Test the data in tools
+```
+
+These were related investigations, not planned stages of a complete engine rewrite.
+
+Later, discovering XboxRecomp offered another experiment: use the original Xbox code through recompilation rather than wait for a manual source reconstruction to be complete. [The next article]({% post_url 2026-10-10-Nova-signing-off %}) follows that change of approach.
+
+---
+
+## Project Material
+
+- [OpenNOD SDK source code (nodsdk-scghost)](https://github.com/aknavj/nodsdk-scghost): parser library, asset viewer, and Blender import plugin
+- OpenNOD SDK format reference and implementation documentation
+- Starev: the architecture reconstruction that preceded the viewer
+- NOD Engine SDK v1.0, Nihilistic Software, 2000

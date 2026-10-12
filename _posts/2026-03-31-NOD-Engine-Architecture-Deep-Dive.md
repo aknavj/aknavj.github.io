@@ -1,184 +1,156 @@
 ---
 layout: article
 title: "Reversing a Dead Legend: Inside StarCraft Ghost's NOD Engine - PART 2"
-description: "Following NOD from startup to a running scene: how resources, entities, simulation, and rendering connect in the surviving StarCraft Ghost prototype."
+description: "Mapping NOD as a black box: how Starev reconstructs the application boundary, staged startup, main loop, and connections between engine subsystems."
 tags: reverse-engineering starcraft ghost nod-engine nihilistic disassembly
 categories: reverse-engineering
 ---
 
-The executable contains names for renderers, factories, templates, actors, and scripts. Listing them tells us what is present. Following a scene through them tells us how the engine works.
+The hardest part of reconstructing an engine is not finding a function to translate. It is knowing where that function belongs and what the surrounding code expects from it.
 
-I wanted to trace that second path: how does a level on disk become a world Nova can move through?
+After the spare-time investigation described in [Part 1]({% post_url 2026-02-03-Reversing-Dead-Legend %}), I stopped trying to expand in every direction. Starev needed a coherent outline before it needed more subsystem internals.
 
 ---
 
-## Following a Scene
+## Treating the Engine as a Black Box
 
-[Part 1]({% post_url 2026-02-03-Reversing-Dead-Legend %}) introduced the project and the engine's broad structure. Here I follow one path through that structure: startup, level loading, entity construction, gameplay updates, and rendering.
+I used the engine's boundaries as a starting point. What enters a system? What does it call? Which resources does it need, and when does it release them?
 
-This is a description of a recovered implementation, **not a tutorial for building an engine**. The names below come from the surviving debug executable, strings, and my reconstruction. The *Vampire: The Masquerade — Redemption* SDK provides useful comparisons, but it documents an earlier version of NOD, not Ghost's exact code.
+This is a black-box view of the architecture, informed by disassembly. I can inspect the code, but do not need to understand every internal algorithm before identifying a module's role.
 
-Most of the architecture below is readable in the PC debug executable, `Star_d.exe`. The playable prototype targets Xbox. The two share engine concepts, but Win32 startup calls and DirectInput describe the PC path, not the Xbox implementation.
+For example, a physics startup call establishes that physics participates in application initialization. It does not establish how collision detection works. Recording the call and its surrounding dependencies is useful even while the physics implementation remains outside the reconstruction's scope.
 
-The route through the engine looks like this:
+The process was to follow a known entry point, inspect its immediate calls, and turn those relationships into declarations and basic code structure. When a dependency led into a large subsystem, I recorded the boundary rather than treating a partial reading as a completed reconstruction.
+
+The result is deliberately limited. **Starev describes the shape of the application more completely than it implements the game.**
+
+---
+
+## The Application Boundary
+
+The PC path begins in `WinMain`. It establishes the window and platform handles, starts the application through `tSequence`, and enters the Windows message loop.
+
+Window handling and frame handling are related but separate responsibilities:
 
 ```text
-Start the engine
-  -> Load level geometry and resources
-  -> Create and place entities
-  -> Update input, gameplay, physics, and AI
-  -> Draw the visible world and update audio
+WinMain
+  -> Establish the window and platform context
+  -> Start the application through tSequence
+  -> Process window messages
+  -> When active and no messages are pending:
+       call tSequence::MainLoop
 ```
 
-That is a reading map, not a complete call graph.
+The window procedure handles events such as activation and input-device reacquisition. The sequence handles the application's engine work.
+
+This division gave the reconstruction a useful outer boundary. Win32 owns the message mechanism; the engine decides what to do during a frame. It also explains why the PC entry path should not be described as the Xbox implementation.
 
 ---
 
-## Startup
+## Startup Happens in Stages
 
-In the PC executable, `WinMain` reads command-line options and configuration, then constructs `tSequence`. That object coordinates startup, the main loop, and shutdown.
+In the current reconstruction, `tSequence` does not bring the entire engine online in its constructor. Startup is divided between `StartApplication` and `StartApplication2`.
 
-The configuration filename is still `masquerade.ini`, inherited from *Vampire*. It is a clear trace of reuse, but an old filename is not itself a technical limitation.
+The first stage establishes services and the initial presentation path. It opens memory support, reads options, starts debug and file services, and enters platform and renderer initialization. It also reaches input, camera and control startup, audio, effects, and the shell.
 
-Startup establishes the foundation first: debug output, memory, files, input, and timing. Rendering comes next, followed by game resources, entity and AI registries, and mission scripting. Later systems can then use services that are already available.
+Resource handling appears in that path too: menu bundles are loaded, or resource logging is enabled instead. Initialization therefore involves both services and content.
 
-Two details helped me read the rest of the binary:
+The main loop then handles the initial video/state transition and reaches the second startup stage. That stage calls into UI, the game library, saves, scripting, additional simulation services, world rendering, and animation-related support before marking the application initialized.
 
-- **The debug allocator records where allocations came from.** Headers retain source locations and allocation identifiers; sentinel values and recognizable fill patterns help detect memory misuse. These are debugging aids, not guarantees that the build is free of memory errors.
-- **Resource lookup repeatedly uses `stdHashtable`.** Models, templates, shaders, and AI types are registered by name or identifier. Recognizing that pattern made factory and loading code easier to follow.
-
-Source-path strings also distinguish shared `std` modules from platform-specific `StdXbox` modules. They show an attempt to keep common services behind consistent interfaces. Directory names alone cannot establish how cleanly every platform dependency was isolated.
-
-Once initialized, `tSequence` moves between menu, gameplay, cutscene, level-change, and exit states. The gameplay path coordinates input, simulation, drawing, audio, and UI. An ordered update path does not, by itself, prove deterministic behavior across runs.
-
----
-
-## What a Level Loads
-
-Loading a level means bringing several related files together. The most useful distinction is between the environment, the objects placed in it, and the definitions of those objects.
-
-| File | Role in the scene |
-|---|---|
-| `.nil` | Level geometry, sectors, and related rendering data |
-| `.nsd` | Entity placement and scene properties |
-| `.not` | Templates describing entity types and their properties |
-| `.nod` | Models used by those entities |
-| `.nsa` | Material definitions |
-| `.npd` | AI navigation data in Ghost |
-
-A **sector** is a region of the world. Portals connect sectors and help determine which regions may be visible. `tWorld` holds the sectors and their relationships, along with entities, lighting references, and collision-related state.
-
-The file layer, `stdFile`, resolves requests through typed search paths. It supports loose files and `.nob` archives, allowing game code to request a resource without having to choose its storage location. The development build's loose assets are particularly convenient for inspection.
-
-Models, animations, and sounds can also be grouped in `.nmb`, `.nnb`, and `.nsb` bundles. Grouping resources helps manage level loading and memory on the Xbox's 64MB of shared RAM. It is one strategy used here, not the only possible way to stream a game.
-
-The important connection is simple: **the level geometry does not contain the whole playable scene**. Placement data, templates, resources, navigation, and mission logic supply the rest.
-
----
-
-## From a Template to a Marine
-
-The central entity type is `tThing`. It carries identity, a transform, a sector relationship, and physics hooks. A transform describes an object's position and orientation.
-
-The hierarchy then adds more specialized state:
+The useful relationship is:
 
 ```text
-tThing                 identity, placement, physics hooks
-  +-- tObject          model and animation-related state
-        +-- tActor     health, team, perception, AI binding
-        |     +-- tPlayer
-        +-- tProp
-        +-- tProjectile
-        +-- tContainer
-        +-- tSensor
-        +-- tRegion
+StartApplication
+  -> Initial services, resources, and presentation
+
+MainLoop
+  -> Initial video/state handling
+  -> StartApplication2
+       -> Additional game-facing services
+       -> Initialized state
 ```
 
-This is NOD's arrangement, not a recommendation that every engine use inheritance this way.
+This is an outline of the reconstructed path, not a claim that all those services are complete in Starev. It also makes the dependencies more concrete than saying "the engine starts everything."
 
-`gameTemplate` reads `.not` definitions. Templates inherit properties and select values such as a model, health, speed, team, and AI class. The recovered modifier table maps those properties to setter functions. In practical terms, much of the difference between two entity types is data applied to shared code.
+---
 
-`gameScene` reads the `.nsd` placement data. It supplies positions, rotations, sector assignments, and scene-wide properties such as fog and ambient lighting. `gameThing` maintains a GUID registry so gameplay systems can refer to entities by identifier rather than by name alone.
+## The Main Loop Is a Dispatcher
 
-For a Marine placed in a level, these responsibilities line up:
+The next layer is `tSequence::MainLoop`. Its job is to coordinate work, not perform every subsystem's work itself.
 
-| Question | Where NOD gets the answer |
+The current reconstruction advances timing, handles initial state, and checks flags before dispatching input, cutscene, sound, simulation, rendering, and UI work. It also performs video-related work, effect updates, and sequence updates.
+
+The flags matter. A frame is not an unconditional list of "input, physics, draw, sound." Some work is enabled only in the relevant application state; the skip-render path also bypasses input and presentation portions of this reconstruction.
+
+| Boundary | Responsibility visible from the loop |
 |---|---|
-| Where is it? | Placement in the `.nsd` scene |
-| What does it look like? | A model selected through its template |
-| Which properties does it start with? | The `.not` template |
-| How does it react? | Its AI binding and runtime state |
-| How can other systems refer to it? | Its GUID in the entity registry |
+| Input | Refresh the input path when enabled |
+| Cutscene | Advance the active cutscene path |
+| Sound | Dispatch audio work |
+| Simulation | Dispatch game-state updates |
+| Rendering | Update presentation and full-screen effects |
+| Shell and UI | Update and draw the interface |
+| End of frame | Present through the renderer when appropriate |
 
-No single file contains the Marine as a complete gameplay object. Loading connects its definition, resources, and placement; the runtime supplies its behavior.
+The table describes what the coordinator asks for. It does not describe the algorithms inside those systems.
 
-That separation is one of the more reusable ideas in this implementation. The specific actor properties and inheritance tree remain game-dependent.
-
----
-
-## Updating the Marine and the Player
-
-Once the scene exists, several systems act on it each frame.
-
-**Player control chooses how Nova moves and interacts.** The simulation contains control paths for movement, aiming, acrobatics, psi abilities, and vehicles. These are specialized gameplay systems layered on top of the shared entity and world infrastructure.
-
-**Physics handles physical interactions.** The build integrates Havok 2.1.0 through wrappers for world setup, collision filtering, and stepping. The camera also checks world geometry to avoid passing through walls. Recovering those interfaces does not recover every tuning decision behind them.
-
-**AI combines entity state with perception and behavior.** `aiAwareness` represents stimuli with properties such as position, radius, intensity, and lifetime. Actor sight and hearing settings affect how those stimuli are evaluated. This gives a concrete place to investigate detection behavior rather than treating stealth as a single feature switch.
-
-The distinction between code being present and code being used matters here. I identified 45 AI classes in the binary, but the recovered startup call registers 27. The remaining classes are evidence of additional implementation, not proof that every corresponding unit or encounter works in this build.
-
-**Mission logic connects events to objectives and sequences.** `cGameScript` exposes functionality through bindings for entities, AI, physics, sound, cutscenes, and other systems. The mission routines are compiled C++, with a timer pool for delayed or recurring events. Scene data also supplies typed parameters.
-
-Changing compiled mission code requires a rebuild. That is different from changing a parameter in a data file. Without the full development tools, I cannot say how every mission-editing task worked or how costly its iteration loop was.
-
-Together, these systems explain the difference between a scene full of models and a playable level: objects have state, react to events, and participate in mission logic.
+This was a manageable way to reconstruct the first few layers: establish the conditions and calls at the top, then preserve the interfaces below them.
 
 ---
 
-## Drawing What Changed
+## The Services Underneath
 
-The renderer separates higher-level resource and scene work from the Direct3D 8 backend. Sector visibility narrows the world considered for drawing.
+The foundation gives the higher layers common operations: memory management, debugging, file access, timing, input, and resource lookup. Math code supplies shared calculations rather than belonging to one gameplay subsystem.
 
-Opaque and transparent surfaces then follow different paths. An opaque surface can hide geometry behind it. A transparent surface must blend with what is already there, so drawing it in the wrong order changes the result. NOD uses a depth-sorted list for transparent surfaces, entities, and effects.
+These services matter because calls to them recur throughout the application. Understanding file lookup once is more useful than treating every model or sound load as an unrelated operation.
 
-Materials select shader classes through a factory. Here, a **shader class** is an engine-side rendering implementation; it is not necessarily one GPU shader program. The registered types include ordinary surfaces, glass, water, cloak effects, and Nova's suit.
+Rendering has another boundary: higher-level model and animation handling sits above the Direct3D-facing code. A request involving a model does not belong at the same level as a device or texture operation, even if both ultimately contribute to the same frame.
 
-I found 44 registered material shader types. The useful point is the mechanism, not the count: a material name selects code that configures how a surface is drawn. Models and materials therefore meet at the renderer, after the loading and entity systems have established what is in the scene.
+The game-facing layer brings together worlds, scenes, entities, and templates. Simulation, AI, effects, and mission logic connect to that layer. In my work, these connections were primarily a map of responsibilities and interfaces; the deeper implementations were not comprehensively reconstructed.
 
-Materials also carry surface-sound information. That gives gameplay a way to distinguish, for example, metal footsteps from dirt footsteps using the surface definition. Playback still goes through the audio system; the material does not replace it.
+```text
+Platform and application sequence
+              |
+      Subsystem entry points
+       /        |         \
+ Presentation  Game state  Interface
+       \        |         /
+      Shared foundation and math
+```
 
-The audio layer manages sound resources, voices, positional playback, and streams. Effects have their own definitions and pooled runtime objects. Those systems turn gameplay events into audible and visible feedback.
-
-Our placed Marine now has a model to draw, state to update, and sound and effects to request. The same connections that made it an entity make its behavior visible and audible.
-
----
-
-## What Reuse Looks Like Here
-
-The comparison with *Vampire* shows both continuity and change. Shared resource patterns and template-driven construction survived. Model and level formats evolved. RPG-specific formats did not all carry over.
-
-Even an extension can mislead: `.npd` meant particle definitions in the older SDK, but navigation data in Ghost. The older documentation is a starting point to check against the newer loaders, not a specification to apply unchanged.
-
-There are limits to the reconstruction too. Parts of the `.nil` level files remain undecoded. Debug names reveal interfaces and organization more readily than authoring workflows or the reasons behind a design decision.
-
-So the lesson is not that an RPG engine cannot support an action game. It is that **shared infrastructure and game-specific assumptions need to be examined separately**. NOD reused the former while changing substantial parts of the latter. The binary shows some of that adaptation, but cannot measure its total production cost.
+This is a responsibility map, not a complete dependency graph. The actual code has cross-system calls that need to be followed individually.
 
 ---
 
-## Where This Leads
+## A Skeleton Is Useful, but Not a Running Engine
 
-We now have a route through the engine rather than a catalogue of every class: initialize services, resolve files, construct a world, update its entities, and present it.
+Source reconstruction has several different levels of progress:
 
-[Part 3]({% post_url 2026-07-14-What-the-Data-Remembers-NOD-Engine-Part-3 %}) uses that understanding to inspect the surviving content. It asks a different question: what is actually present in this snapshot, and how much can that tell us about the game being made?
+- A name and source path can identify a module.
+- A declaration can record an interface.
+- A reconstructed function can preserve a piece of control flow.
+- A working implementation must also satisfy its dependencies and behave correctly.
+
+Starev contains work at different points along that progression. A source tree with files for physics, AI, or scripts should not be read as a completed implementation of those systems. Some files preserve little more than structure.
+
+The skeleton helped me stop restarting. I could return to a known boundary and extend it in small steps instead of reopening the whole engine as an undifferentiated problem.
+
+It did not make the remaining task small. Restoring the internals of a game library, renderer, simulation, and mission system would be a much larger effort than mapping their entry points.
 
 ---
 
-## References
+## A Smaller Way to Test the Understanding
 
-- [StarCraft: Ghost — What Went Wrong](http://www.polygon.com/2016/7/5/11819438/starcraft-ghost-what-went-wrong), Polygon, July 2016
-- [StarCraft: Ghost](https://starcraft.fandom.com/wiki/StarCraft:_Ghost), StarCraft Wiki
-- [NStigate Games (Nihilistic Software)](https://en.wikipedia.org/wiki/NStigate_Games), Wikipedia
-- Jason Schreier, *Play Nice: The Rise, Fall, and Future of Blizzard Entertainment*, Grand Central Publishing, 2024
-- NOD Engine SDK v1.0, Nihilistic Software, 2000 — file format specifications and authoring tools for *Vampire: The Masquerade — Redemption*
-- Starev — StarCraft Ghost Reversed *(private, under development)*
+The reconstruction also raised questions about the custom files those systems consume. A plausible loader in pseudo-code is not enough to know that I have interpreted its data correctly.
+
+Rather than wait for a reconstructed engine to run, I could test that understanding independently: read a model, inspect an animation, or assemble a level in a viewer.
+
+That became the next step. [Part 3]({% post_url 2026-07-14-What-the-Data-Remembers-NOD-Engine-Part-3 %}) describes OpenNOD SDK, a tool for making those file structures and relationships visible.
+
+---
+
+## Basis for This Reconstruction
+
+- The development build's `Star_d.exe`, studied through disassembly and decompiled pseudo-code
+- [Starev source code (scghost-rev)](https://github.com/aknavj/scghost-rev): reconstructed platform entry, `tSequence`, and surrounding subsystem interfaces
+- NOD Engine SDK v1.0 for *Vampire: The Masquerade - Redemption*, used as historical context rather than an exact specification for Ghost
